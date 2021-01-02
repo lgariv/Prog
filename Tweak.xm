@@ -145,6 +145,9 @@ extern dispatch_queue_t __BBServerQueue;
 	self.progressLabel.text = [NSString stringWithFormat:@"%i%%", (int)(arg1 * 100)];
 	self.progressLabel.textColor = [UIColor whiteColor];
 	[self.progressLabel sizeToFit];
+
+	NSDictionary* userInfo = @{ @"fraction" : [NSNumber numberWithDouble: arg1] };
+	[[NSNotificationCenter defaultCenter] postNotificationName:@"updateProgress" object:nil userInfo:userInfo];
 }
 
 -(void)_drawOutgoingCircleWithCenter:(CGPoint)arg1 {
@@ -200,38 +203,59 @@ extern dispatch_queue_t __BBServerQueue;
 static NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
 
 @interface UILabel (extra)
--(void)progressBar:(float)percentage ;
+@property (nonatomic, strong) UIProgressView *progressView;
+@property (nonatomic, strong) NSProgress *progress;
+-(void)progressBar:(UIProgressView*)progressBarView progress:(NSProgress*)progress ;
 @end
 
+
 %hook UILabel
+%property (nonatomic, strong) UIProgressView *progressView;
+%property (nonatomic, strong) NSProgress *progress;
+
+- (void) dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
 -(void)setText:(NSString *)arg1 {
 	%orig;
 	if ([arg1 isEqualToString:@"com.miwix.downloadbar14-progressbar"]) {
+		[[NSNotificationCenter defaultCenter] addObserver:self
+												 selector:@selector(receiveNotification:) 
+												     name:@"updateProgress"
+												   object:nil];
 		[self setAlpha:0];
-		dict = [@{ (NSString*)[(NCNotificationContentView*)self.superview.superview primaryText] : @{ @"view" : self.superview, @"frame" : [NSValue valueWithCGRect:self.bounds] } } mutableCopy];
+		// dict = [@{ (NSString*)[(NCNotificationContentView*)self.superview.superview primaryText] : @{ @"view" : self.superview, @"frame" : [NSValue valueWithCGRect:self.bounds] } } mutableCopy];
 		// dict = @{};
 		// [dict addEntriesFromDictionary:addToDict];
-		[self progressBar:50];
+		NSProgress *progress = [NSProgress progressWithTotalUnitCount:100];
+		UIProgressView *progressBarView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+		[progress setCompletedUnitCount:0];
+		progressBarView.observedProgress = progress;
+		self.progressView = progressBarView;
+		self.progress = progress;
+		[self progressBar:self.progressView progress:self.progress];
 	}
 }
 
 %new
--(void)progressBar:(float)percentage {
-	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-		UIProgressView *progressBarView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-		progressBarView.progressTintColor = [UIColor systemBlueColor];
-		// [[progressBarView layer] setFrame:self.bounds];
-		// [[progressBarView layer] setBorderColor:[UIColor redColor].CGColor];
-		progressBarView.trackTintColor = [UIColor whiteColor];
-		// progressBarView.clipsToBounds = YES;
-		[progressBarView setProgress:(float)(10/100) animated:NO];  //15%
+-(void)receiveNotification:(NSNotification *)notification {
+	NSDictionary* userInfo = notification.userInfo;
+	double fraction = [userInfo[@"fraction"] doubleValue];
+	NSLog(@"[TESTTES] fraction: %f", fraction);
+	[self.progress setCompletedUnitCount:(fraction*100)];
+	[self progressBar:self.progressView progress:self.progress];
+}
 
-		// dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-			[progressBarView setFrame:self.frame];
-			[progressBarView setCenter:CGPointMake(self.superview.center.x, self.superview.center.y+16)];
-			[self.superview.superview addSubview:progressBarView];
-			[progressBarView setProgress:(float)(50/100) animated:YES];  //15%
-		// });
+%new
+-(void)progressBar:(UIProgressView*)progressBarView progress:(NSProgress*)progress {
+	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+		progressBarView.progressTintColor = [UIColor systemBlueColor];
+		progressBarView.trackTintColor = [UIColor lightGrayColor];
+
+		[progressBarView setFrame:self.frame];
+		[progressBarView setCenter:CGPointMake(self.superview.center.x, self.superview.center.y+18)];
+		[self.superview.superview addSubview:progressBarView];
 	});
 }
 %end
