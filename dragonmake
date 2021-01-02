@@ -1,0 +1,19 @@
+---
+name: DownloadBar14
+icmd: killall -9 SpringBoard
+
+all:
+  archs:
+    - arm64
+    # - arm64e
+
+DownloadBar14:
+  type: tweak
+  files:
+    - "Tweak.xm"
+  frameworks:
+    - Foundation
+    - UIKit
+    - UserNotifications
+    - QuartzCore
+    - BulletinBoard

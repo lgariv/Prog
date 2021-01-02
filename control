@@ -1,0 +1,9 @@
+Package: com.miwix.downloadbar14
+Name: DownloadBar14
+Depends: mobilesubstrate
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: Show a progress bar for downloading apps instead!
+Maintainer: Lavie Gariv
+Author: shepgoba
+Section: Tweaks
