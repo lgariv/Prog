@@ -129,7 +129,7 @@ extern dispatch_queue_t __BBServerQueue;
 		
 		[bulletin setBulletinID:bulletinUUID];
 		[bulletin setRecordID:bulletinUUID];
-		[bulletin setPublisherBulletinID:@"com.example.notification"];
+		[bulletin setPublisherBulletinID:@"com.miwix.downloadbar14"];
 		[bulletin setDate:[NSDate date]];
 		[bulletin setClearable:YES];
 		// [bulletin setLockScreenPriority:9223372036854775807];
@@ -176,65 +176,62 @@ extern dispatch_queue_t __BBServerQueue;
 }
 %end
 
+@interface PLPlatterView : UIView
+@end
+
+@interface NCNotificationRequest : NSObject
+@property BBBulletin *bulletin;
+@end
+
+@interface NCNotificationViewControllerView : UIView
+@property PLPlatterView *contentView;
+@end
+
 @interface NCNotificationContentView : UIView
-@property (nonatomic, strong) NSString *primaryText;
-@property (nonatomic, strong) UILabel *secondaryLabel;
-@property (nonatomic, strong) NSString *secondaryText;
-@end 
-
-@interface PLPlatterCustomContentView : UIView
+@property(getter=_secondaryLabel,nonatomic,readonly) UILabel *secondaryLabel;
 @end
 
-%hook PLPlatterCustomContentView
--(id)initWithAncestorPlatterView:(__kindof UIView *)arg1 {
-	%orig;
-	/*if ([self.subviews[0] isKindOfClass:[%c(NCNotificationContentView) class]]) {
-		NCNotificationContentView *view = self.subviews[0];
-		if ([view.secondaryText isEqualToString:@"progress bar"]) {
-			view.secondaryLabel.alpha = 0;
-		} else {
-			return %orig;
-		}
-	}*/
-	return self;
-}
-%end
-
-static NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-
-@interface UILabel (extra)
-@property (nonatomic, strong) UIProgressView *progressView;
-@property (nonatomic, strong) NSProgress *progress;
--(void)progressBar:(UIProgressView*)progressBarView progress:(NSProgress*)progress ;
+@interface NCNotificationShortLookView : PLPlatterView
+@property(getter=_notificationContentView,nonatomic,readonly) NCNotificationContentView *notificationContentView;
 @end
 
+@interface NCNotificationShortLookViewController : UIViewController
+@property NCNotificationRequest *notificationRequest;
 
-%hook UILabel
-%property (nonatomic, strong) UIProgressView *progressView;
-%property (nonatomic, strong) NSProgress *progress;
+@property NSProgress *progress;
+@end
 
-- (void) dealloc {
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
+%hook NCNotificationShortLookViewController
+%property(nonatomic, strong) NSProgress *progress;
+
+-(void)viewDidLoad{
+	%orig;
+	
+	self.progress = [NSProgress progressWithTotalUnitCount:100];
 }
 
--(void)setText:(NSString *)arg1 {
+-(void)viewDidAppear:(BOOL)animated{
 	%orig;
-	if ([arg1 isEqualToString:@"com.miwix.downloadbar14-progressbar"]) {
-		[[NSNotificationCenter defaultCenter] addObserver:self
-												 selector:@selector(receiveNotification:) 
-												     name:@"updateProgress"
-												   object:nil];
-		[self setAlpha:0];
-		// dict = [@{ (NSString*)[(NCNotificationContentView*)self.superview.superview primaryText] : @{ @"view" : self.superview, @"frame" : [NSValue valueWithCGRect:self.bounds] } } mutableCopy];
-		// dict = @{};
-		// [dict addEntriesFromDictionary:addToDict];
-		NSProgress *progress = [NSProgress progressWithTotalUnitCount:100];
+	
+	if ([self.notificationRequest.bulletin.publisherBulletinID isEqualToString:@"com.miwix.downloadbar14"]) {
+		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(receiveNotification:) name:@"updateProgress" object:nil];
+		
+		UILabel *label = ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView.secondaryLabel;
+		label.alpha = 0;
+		
+		//self.progress = [NSProgress progressWithTotalUnitCount:100];
 		UIProgressView *progressBarView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-		[progress setCompletedUnitCount:0];
-		progressBarView.observedProgress = progress;
-		self.progressView = progressBarView;
-		self.progress = progress;
-		[self progressBar:self.progressView progress:self.progress];
+		[self.progress setCompletedUnitCount:0];
+		progressBarView.observedProgress = self.progress;
+		
+		//dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+			progressBarView.progressTintColor = [UIColor systemBlueColor];
+			progressBarView.trackTintColor = [UIColor lightGrayColor];
+			
+			[progressBarView setFrame:label.frame];
+			[progressBarView setCenter:CGPointMake(label.superview.center.x, label.superview.center.y+18)];
+			[label.superview.superview addSubview:progressBarView];
+		//});
 	}
 }
 
@@ -242,21 +239,7 @@ static NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
 -(void)receiveNotification:(NSNotification *)notification {
 	NSDictionary* userInfo = notification.userInfo;
 	double fraction = [userInfo[@"fraction"] doubleValue];
-	NSLog(@"[TESTTES] fraction: %f", fraction);
 	[self.progress setCompletedUnitCount:(fraction*100)];
-	[self progressBar:self.progressView progress:self.progress];
-}
-
-%new
--(void)progressBar:(UIProgressView*)progressBarView progress:(NSProgress*)progress {
-	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-		progressBarView.progressTintColor = [UIColor systemBlueColor];
-		progressBarView.trackTintColor = [UIColor lightGrayColor];
-
-		[progressBarView setFrame:self.frame];
-		[progressBarView setCenter:CGPointMake(self.superview.center.x, self.superview.center.y+18)];
-		[self.superview.superview addSubview:progressBarView];
-	});
 }
 %end
 
