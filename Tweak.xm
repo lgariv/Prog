@@ -102,42 +102,42 @@ extern dispatch_queue_t __BBServerQueue;
 		[self addSubview: self.progressBarBackground];
 		[self addSubview: self.progressBar];
 		[self addSubview: self.progressLabel];
-
-		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-			SBIconImageView *viewview = (SBIconImageView*)self.superview;
-			// while (viewview == nil) SBIconImageView *viewview = self.superview;
-			if (viewview != nil) {
-				SBIcon *icon = [viewview icon];
-				if (icon.displayName != nil) self.downApp = icon.displayName;
-				BBBulletinRequest *bulletin = [[BBBulletinRequest alloc] init];
-				[bulletin setHeader:@"APP STORE"];
-				[bulletin setTitle:[NSString stringWithFormat:@"Downloading %@", (self.downApp != nil) ? self.downApp : icon.displayName]];
-				[bulletin setMessage:@"com.miwix.downloadbar14-progressbar"];
-
-				NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
-				
-				//Temporary Fix because AppStore Notifications don't work on my device
-				//[bulletin setSection:@"com.apple.AppStore"];
-				//[bulletin setSectionID:@"com.apple.AppStore"];
-				[bulletin setSection:@"com.apple.Preferences"];
-				[bulletin setSectionID:@"com.apple.Preferences"];
-				
-				[bulletin setBulletinID:bulletinUUID];
-				[bulletin setRecordID:bulletinUUID];
-				[bulletin setPublisherBulletinID:@"com.example.notification"];
-				[bulletin setDate:[NSDate date]];
-				[bulletin setClearable:YES];
-				// [bulletin setLockScreenPriority:9223372036854775807];
-
-				// dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-					dispatch_async(__BBServerQueue, ^{
-						[sharedServer publishBulletinRequest:bulletin destinations:2];
-					});
-				// });
-			}
-		});
 	}
 	return self;
+}
+
+-(void)didMoveToSuperview{
+	%orig;
+	
+	SBIconImageView *viewview = (SBIconImageView*)self.superview;
+	// while (viewview == nil) SBIconImageView *viewview = self.superview;
+	if (viewview != nil) {
+		SBIcon *icon = [viewview icon];
+		if (icon.displayName != nil) self.downApp = icon.displayName;
+		BBBulletinRequest *bulletin = [[BBBulletinRequest alloc] init];
+		[bulletin setHeader:@"APP STORE"];
+		[bulletin setTitle:[NSString stringWithFormat:@"Downloading %@", (self.downApp != nil) ? self.downApp : icon.displayName]];
+		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar"];
+		
+		NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
+		
+		//Temporary Fix because AppStore Notifications don't work on my device
+		//[bulletin setSection:@"com.apple.AppStore"];
+		//[bulletin setSectionID:@"com.apple.AppStore"];
+		[bulletin setSection:@"com.apple.Preferences"];
+		[bulletin setSectionID:@"com.apple.Preferences"];
+		
+		[bulletin setBulletinID:bulletinUUID];
+		[bulletin setRecordID:bulletinUUID];
+		[bulletin setPublisherBulletinID:@"com.example.notification"];
+		[bulletin setDate:[NSDate date]];
+		[bulletin setClearable:YES];
+		// [bulletin setLockScreenPriority:9223372036854775807];
+		
+		dispatch_async(__BBServerQueue, ^{
+			[sharedServer publishBulletinRequest:bulletin destinations:2];
+		});
+	}
 }
 
 -(void)setDisplayedFraction:(double)arg1 {
