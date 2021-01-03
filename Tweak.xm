@@ -110,7 +110,6 @@ extern dispatch_queue_t __BBServerQueue;
 	%orig;
 	
 	SBIconImageView *viewview = (SBIconImageView*)self.superview;
-	// while (viewview == nil) SBIconImageView *viewview = self.superview;
 	if (viewview != nil) {
 		SBIcon *icon = [viewview icon];
 		if (icon.displayName != nil) self.downApp = icon.displayName;
@@ -132,7 +131,6 @@ extern dispatch_queue_t __BBServerQueue;
 		[bulletin setPublisherBulletinID:@"com.miwix.downloadbar14"];
 		[bulletin setDate:[NSDate date]];
 		[bulletin setClearable:YES];
-		// [bulletin setLockScreenPriority:9223372036854775807];
 		
 		dispatch_async(__BBServerQueue, ^{
 			[sharedServer publishBulletinRequest:bulletin destinations:2];
@@ -219,19 +217,16 @@ extern dispatch_queue_t __BBServerQueue;
 		UILabel *label = ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView.secondaryLabel;
 		label.alpha = 0;
 		
-		//self.progress = [NSProgress progressWithTotalUnitCount:100];
 		UIProgressView *progressBarView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
 		[self.progress setCompletedUnitCount:0];
 		progressBarView.observedProgress = self.progress;
 		
-		//dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-			progressBarView.progressTintColor = [UIColor systemBlueColor];
-			progressBarView.trackTintColor = [UIColor lightGrayColor];
-			
-			[progressBarView setFrame:label.frame];
-			[progressBarView setCenter:CGPointMake(label.superview.center.x, label.superview.center.y+18)];
-			[label.superview.superview addSubview:progressBarView];
-		//});
+		progressBarView.progressTintColor = [UIColor systemBlueColor];
+		progressBarView.trackTintColor = [UIColor lightGrayColor];
+		
+		[progressBarView setFrame:label.frame];
+		[progressBarView setCenter:CGPointMake(label.superview.center.x, label.superview.center.y+18)];
+		[label.superview.superview addSubview:progressBarView];
 	}
 }
 
@@ -242,26 +237,3 @@ extern dispatch_queue_t __BBServerQueue;
 	[self.progress setCompletedUnitCount:(fraction*100)];
 }
 %end
-
-/*%hook NCNotificationContentView
--(void)setPrimaryText:(NSString *)arg1 {
-	%orig;
-	if ([[dict allKeys] count] >= 1) {
-		for (NSString *title in [dict allKeys]) {
-			if ([arg1 isEqualToString:title]) {
-				NSDictionary *innerDict = dict[title];
-				UIProgressView *progressBarView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-				progressBarView.progressTintColor = [UIColor systemBlueColor];
-				progressBarView.trackTintColor = [UIColor whiteColor];
-				[progressBarView setProgress:(float)(10/100) animated:NO];  //15%
-				dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-					[progressBarView setFrame:[innerDict[@"frame"] CGRectValue]];
-					[self addSubview:progressBarView];
-					[progressBarView setProgress:(float)(50/100) animated:YES];  //15%
-				});
-				break;
-			}
-		}
-	}
-}
-%end*/
