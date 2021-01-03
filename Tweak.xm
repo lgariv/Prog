@@ -120,8 +120,13 @@ extern dispatch_queue_t __BBServerQueue;
 				[bulletin setMessage:@"com.miwix.downloadbar14-progressbar"];
 
 				NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
-				[bulletin setSection:@"com.apple.AppStore"];
-				[bulletin setSectionID:@"com.apple.AppStore"];
+				
+				//Temporary Fix because AppStore Notifications don't work on my device
+				//[bulletin setSection:@"com.apple.AppStore"];
+				//[bulletin setSectionID:@"com.apple.AppStore"];
+				[bulletin setSection:@"com.reddit.Reddit"];
+				[bulletin setSectionID:@"com.reddit.Reddit"];
+				
 				[bulletin setBulletinID:bulletinUUID];
 				[bulletin setRecordID:bulletinUUID];
 				[bulletin setPublisherBulletinID:@"com.example.notification"];
