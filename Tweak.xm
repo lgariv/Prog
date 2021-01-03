@@ -30,12 +30,12 @@
 @end
 
 @interface BBBulletinRequest : BBBulletin
-@property (nonatomic,copy) NSString * bulletinID; 
+-(void)generateNewBulletinID;
 @end
 
 @interface BBServer : NSObject
 +(instancetype)SLM_sharedInstance;
--(void)publishBulletin:(BBBulletin*)arg1 destinations:(unsigned long long)arg2;
+-(void)publishBulletinRequest:(BBBulletinRequest*)arg1 destinations:(unsigned long long)arg2;
 @end
 
 static BBServer *sharedServer;
@@ -114,7 +114,7 @@ extern dispatch_queue_t __BBServerQueue;
 			if (viewview != nil) {
 				SBIcon *icon = [viewview icon];
 				if (icon.displayName != nil) self.downApp = icon.displayName;
-				BBBulletin *bulletin = [[%c(BBBulletin) alloc] init];
+				BBBulletinRequest *bulletin = [[BBBulletinRequest alloc] init];
 				[bulletin setHeader:@"APP STORE"];
 				[bulletin setTitle:[NSString stringWithFormat:@"Downloading %@", (self.downApp != nil) ? self.downApp : icon.displayName]];
 				[bulletin setMessage:@"com.miwix.downloadbar14-progressbar"];
@@ -131,7 +131,7 @@ extern dispatch_queue_t __BBServerQueue;
 
 				// dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
 					dispatch_async(__BBServerQueue, ^{
-						[sharedServer publishBulletin:bulletin destinations:14];
+						[sharedServer publishBulletinRequest:bulletin destinations:2];
 					});
 				// });
 			}
