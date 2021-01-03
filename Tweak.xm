@@ -119,8 +119,8 @@ extern dispatch_queue_t __BBServerQueue;
 				//Temporary Fix because AppStore Notifications don't work on my device
 				//[bulletin setSection:@"com.apple.AppStore"];
 				//[bulletin setSectionID:@"com.apple.AppStore"];
-				[bulletin setSection:@"com.reddit.Reddit"];
-				[bulletin setSectionID:@"com.reddit.Reddit"];
+				[bulletin setSection:@"com.apple.Preferences"];
+				[bulletin setSectionID:@"com.apple.Preferences"];
 				
 				[bulletin setBulletinID:bulletinUUID];
 				[bulletin setRecordID:bulletinUUID];
