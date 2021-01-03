@@ -34,7 +34,6 @@
 @end
 
 @interface BBServer : NSObject
-+(instancetype)SLM_sharedInstance;
 -(void)publishBulletinRequest:(BBBulletinRequest*)arg1 destinations:(unsigned long long)arg2;
 @end
 
@@ -43,10 +42,6 @@ static BBServer *sharedServer;
 extern dispatch_queue_t __BBServerQueue;
 
 %hook BBServer
-%new
-+(id)SLM_sharedInstance {
-    return sharedServer;
-}
 -(id)initWithQueue:(id)arg1 {
     sharedServer = %orig;
     return sharedServer;
