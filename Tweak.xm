@@ -154,7 +154,7 @@ extern dispatch_queue_t __BBServerQueue;
 	self.progressLabel.textColor = [UIColor whiteColor];
 	[self.progressLabel sizeToFit];
 
-	NSDictionary* userInfo = @{ @"fraction" : [NSNumber numberWithDouble: arg1] };
+	NSDictionary* userInfo = @{@"fraction": [NSNumber numberWithDouble: arg1], @"bundleId": self.bundleId};
 	[[NSNotificationCenter defaultCenter] postNotificationName:@"updateProgress" object:nil userInfo:userInfo];
 }
 
@@ -268,6 +268,8 @@ extern dispatch_queue_t __BBServerQueue;
 %new
 -(void)receiveNotification:(NSNotification *)notification {
 	NSDictionary* userInfo = notification.userInfo;
+	if(![userInfo[@"bundleId"] isEqualToString:[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]) return;
+
 	double fraction = [userInfo[@"fraction"] doubleValue];
 	[self.progressView setProgress:fraction animated:true];
 }
