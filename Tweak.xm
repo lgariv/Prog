@@ -69,6 +69,7 @@ extern dispatch_queue_t __BBServerQueue;
 
 @interface SBIcon : NSObject
 @property (nonatomic, strong) NSString *displayName;
+@property (nonatomic, strong) NSString *uniqueIdentifier;
 @end
 
 @interface SBDownloadingIcon : NSObject
@@ -207,7 +208,7 @@ extern dispatch_queue_t __BBServerQueue;
 @interface NCNotificationShortLookViewController : UIViewController
 @property NCNotificationRequest *notificationRequest;
 
-@property NSProgress *progress;
+@property UIProgressView *progressView;
 @end
 
 %hook BBBulletin
@@ -227,14 +228,14 @@ extern dispatch_queue_t __BBServerQueue;
 %end
 
 %hook NCNotificationShortLookViewController
-%property(nonatomic, strong) NSProgress *progress;
+%property(nonatomic, strong) UIProgressView *progressView;
 
 -(void)viewDidLoad{
 	%orig;
 	
 	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
-		self.progress = [NSProgress progressWithTotalUnitCount:100];
-		//self.notificationRequest.content.icon = [UIImage _applicationIconImageForBundleIdentifier:[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1] format:1];
+		self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+		[self.progressView setProgress:0 animated:false];
 	}
 }
 
@@ -248,20 +249,17 @@ extern dispatch_queue_t __BBServerQueue;
 		UILabel *label = content.secondaryLabel;
 		label.hidden = true;
 		
-		UIProgressView *progressBarView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-		progressBarView.translatesAutoresizingMaskIntoConstraints = false;
+		self.progressView.translatesAutoresizingMaskIntoConstraints = false;
 		
-		[self.progress setCompletedUnitCount:0];
-		progressBarView.observedProgress = self.progress;
+		self.progressView.progressTintColor = [UIColor systemBlueColor];
+		self.progressView.trackTintColor = [UIColor lightGrayColor];
 		
-		progressBarView.progressTintColor = [UIColor systemBlueColor];
-		progressBarView.trackTintColor = [UIColor lightGrayColor];
+		[self.progressView removeFromSuperview];
+		[content addSubview:self.progressView];
 		
-		[content addSubview:progressBarView];
-		
-		[progressBarView.centerYAnchor constraintEqualToAnchor:label.centerYAnchor].active = true;
-		[progressBarView.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
-		[progressBarView.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
+		[self.progressView.centerYAnchor constraintEqualToAnchor:label.centerYAnchor].active = true;
+		[self.progressView.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
+		[self.progressView.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
 	}
 }
 
@@ -269,6 +267,6 @@ extern dispatch_queue_t __BBServerQueue;
 -(void)receiveNotification:(NSNotification *)notification {
 	NSDictionary* userInfo = notification.userInfo;
 	double fraction = [userInfo[@"fraction"] doubleValue];
-	[self.progress setCompletedUnitCount:(fraction*100)];
+	[self.progressView setProgress:fraction animated:true];
 }
 %end
