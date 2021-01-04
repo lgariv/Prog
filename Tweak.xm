@@ -208,7 +208,7 @@ extern dispatch_queue_t __BBServerQueue;
 	self.progress = [NSProgress progressWithTotalUnitCount:100];
 }
 
--(void)viewDidAppear:(BOOL)animated{
+-(void)viewWillAppear:(BOOL)animated{
 	%orig;
 	
 	if ([self.notificationRequest.bulletin.publisherBulletinID isEqualToString:@"com.miwix.downloadbar14"]) {
