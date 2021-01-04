@@ -62,7 +62,6 @@ extern dispatch_queue_t __BBServerQueue;
 @property (nonatomic, strong) UILabel *progressLabel;
 @property (nonatomic, strong) UIView *progressBar;
 @property (nonatomic, strong) UIView *progressBarBackground;
-@property (nonatomic, strong) NSString *downApp;
 @property (nonatomic, assign) double displayedFraction;
 -(void)setupSubviews;
 @end
@@ -84,7 +83,6 @@ extern dispatch_queue_t __BBServerQueue;
 %property (nonatomic, strong) UILabel *progressLabel;
 %property (nonatomic, strong) UIView *progressBar;
 %property (nonatomic, strong) UIView *progressBarBackground;
-%property (nonatomic, strong) NSString *downApp;
 
 -(void)setFrame:(CGRect)arg1 {
 	%orig;
@@ -121,9 +119,9 @@ extern dispatch_queue_t __BBServerQueue;
 	SBIconImageView *viewview = (SBIconImageView*)self.superview;
 	if (viewview != nil) {
 		SBIcon *icon = [viewview icon];
-		if (icon.displayName != nil) self.downApp = icon.displayName;
+
 		BBBulletinRequest *bulletin = [[BBBulletinRequest alloc] init];
-		[bulletin setHeader:(self.downApp != nil ? self.downApp : icon.displayName)];
+		[bulletin setHeader:icon.displayName];
 		[bulletin setTitle:@"Downloading"];
 		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar"];
 		
