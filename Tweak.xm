@@ -62,6 +62,7 @@ extern dispatch_queue_t __BBServerQueue;
 @property (nonatomic, strong) UILabel *progressLabel;
 @property (nonatomic, strong) UIView *progressBar;
 @property (nonatomic, strong) UIView *progressBarBackground;
+@property (nonatomic, strong) NSString *bundleId;
 @property (nonatomic, assign) double displayedFraction;
 -(void)setupSubviews;
 @end
@@ -83,6 +84,7 @@ extern dispatch_queue_t __BBServerQueue;
 %property (nonatomic, strong) UILabel *progressLabel;
 %property (nonatomic, strong) UIView *progressBar;
 %property (nonatomic, strong) UIView *progressBarBackground;
+%property (nonatomic, strong) NSString *bundleId;
 
 -(void)setFrame:(CGRect)arg1 {
 	%orig;
@@ -119,6 +121,7 @@ extern dispatch_queue_t __BBServerQueue;
 	SBIconImageView *viewview = (SBIconImageView*)self.superview;
 	if (viewview != nil) {
 		SBIcon *icon = [viewview icon];
+		self.bundleId = [icon isKindOfClass:NSClassFromString(@"SBLeafIcon")] ? MSHookIvar<NSString*>(icon, "_applicationBundleID") : icon.uniqueIdentifier;
 
 		BBBulletinRequest *bulletin = [[BBBulletinRequest alloc] init];
 		[bulletin setHeader:icon.displayName];
@@ -135,7 +138,8 @@ extern dispatch_queue_t __BBServerQueue;
 		
 		[bulletin setBulletinID:bulletinUUID];
 		[bulletin setRecordID:bulletinUUID];
-		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14/%@", ([icon isKindOfClass:NSClassFromString(@"SBLeafIcon")] ? MSHookIvar<NSString*>(icon, "_applicationBundleID") : icon.uniqueIdentifier)]];
+		[bulletin setThreadID:self.bundleId];
+		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14/%@", self.bundleId]];
 		[bulletin setDate:[NSDate date]];
 		
 		dispatch_async(__BBServerQueue, ^{
