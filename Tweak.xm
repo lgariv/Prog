@@ -215,7 +215,7 @@ extern dispatch_queue_t __BBServerQueue;
 		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(receiveNotification:) name:@"updateProgress" object:nil];
 		
 		UILabel *label = ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView.secondaryLabel;
-		label.alpha = 0;
+		label.hidden = true;
 		
 		UIProgressView *progressBarView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
 		[self.progress setCompletedUnitCount:0];
