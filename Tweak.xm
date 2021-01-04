@@ -4,6 +4,14 @@
 
 #import <UserNotifications/UserNotifications.h>
 
+@interface BBSectionIconVariant : NSObject
+@property (nonatomic,copy) NSData * imageData;
+@end
+
+@interface BBSectionIcon : NSObject
+-(void)addVariant:(BBSectionIconVariant *)arg1 ;
+@end
+
 @interface BBBulletin : NSObject
 @property (nonatomic,readonly) NSString * sectionDisplayName;
 @property (nonatomic,copy) NSString * header;
@@ -43,8 +51,8 @@ extern dispatch_queue_t __BBServerQueue;
 
 %hook BBServer
 -(id)initWithQueue:(id)arg1 {
-    sharedServer = %orig;
-    return sharedServer;
+	sharedServer = %orig;
+	return sharedServer;
 }
 %end
 
@@ -114,8 +122,8 @@ extern dispatch_queue_t __BBServerQueue;
 		SBIcon *icon = [viewview icon];
 		if (icon.displayName != nil) self.downApp = icon.displayName;
 		BBBulletinRequest *bulletin = [[BBBulletinRequest alloc] init];
-		[bulletin setHeader:@"APP STORE"];
-		[bulletin setTitle:[NSString stringWithFormat:@"Downloading %@", (self.downApp != nil) ? self.downApp : icon.displayName]];
+		[bulletin setHeader:(self.downApp != nil ? self.downApp : icon.displayName)];
+		[bulletin setTitle:@"Downloading"];
 		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar"];
 		
 		NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
@@ -128,9 +136,8 @@ extern dispatch_queue_t __BBServerQueue;
 		
 		[bulletin setBulletinID:bulletinUUID];
 		[bulletin setRecordID:bulletinUUID];
-		[bulletin setPublisherBulletinID:@"com.miwix.downloadbar14"];
+		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14/%@", ([icon isKindOfClass:NSClassFromString(@"SBLeafIcon")] ? MSHookIvar<NSString*>(icon, "_applicationBundleID") : icon.uniqueIdentifier)]];
 		[bulletin setDate:[NSDate date]];
-		[bulletin setClearable:YES];
 		
 		dispatch_async(__BBServerQueue, ^{
 			[sharedServer publishBulletinRequest:bulletin destinations:2];
@@ -174,6 +181,10 @@ extern dispatch_queue_t __BBServerQueue;
 }
 %end
 
+@interface UIImage()
++(instancetype)_applicationIconImageForBundleIdentifier:(NSString*)bundleId format:(int)format;
+@end
+
 @interface PLPlatterView : UIView
 @end
 
@@ -199,19 +210,38 @@ extern dispatch_queue_t __BBServerQueue;
 @property NSProgress *progress;
 @end
 
+%hook BBBulletin
+-(BBSectionIcon *)sectionIcon{
+	if ([self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+		UIImage *img = [UIImage _applicationIconImageForBundleIdentifier:[self.publisherBulletinID substringFromIndex:[self.publisherBulletinID rangeOfString:@"/"].location + 1] format:1];
+
+		BBSectionIconVariant *variant = [[BBSectionIconVariant alloc] init];
+		[variant setImageData:UIImagePNGRepresentation(img)];
+
+		BBSectionIcon *icon = [[BBSectionIcon alloc] init];
+		[icon addVariant:variant];
+
+		return icon;
+	} else return %orig;
+}
+%end
+
 %hook NCNotificationShortLookViewController
 %property(nonatomic, strong) NSProgress *progress;
 
 -(void)viewDidLoad{
 	%orig;
 	
-	self.progress = [NSProgress progressWithTotalUnitCount:100];
+	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+		self.progress = [NSProgress progressWithTotalUnitCount:100];
+		//self.notificationRequest.content.icon = [UIImage _applicationIconImageForBundleIdentifier:[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1] format:1];
+	}
 }
 
 -(void)viewWillAppear:(BOOL)animated{
 	%orig;
-	
-	if ([self.notificationRequest.bulletin.publisherBulletinID isEqualToString:@"com.miwix.downloadbar14"]) {
+
+	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
 		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(receiveNotification:) name:@"updateProgress" object:nil];
 		
 		NCNotificationContentView *content = ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView;
