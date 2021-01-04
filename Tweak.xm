@@ -214,19 +214,24 @@ extern dispatch_queue_t __BBServerQueue;
 	if ([self.notificationRequest.bulletin.publisherBulletinID isEqualToString:@"com.miwix.downloadbar14"]) {
 		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(receiveNotification:) name:@"updateProgress" object:nil];
 		
-		UILabel *label = ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView.secondaryLabel;
+		NCNotificationContentView *content = ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView;
+		UILabel *label = content.secondaryLabel;
 		label.hidden = true;
 		
 		UIProgressView *progressBarView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+		progressBarView.translatesAutoresizingMaskIntoConstraints = false;
+		
 		[self.progress setCompletedUnitCount:0];
 		progressBarView.observedProgress = self.progress;
 		
 		progressBarView.progressTintColor = [UIColor systemBlueColor];
 		progressBarView.trackTintColor = [UIColor lightGrayColor];
 		
-		[progressBarView setFrame:label.frame];
-		[progressBarView setCenter:CGPointMake(label.superview.center.x, label.superview.center.y+18)];
-		[label.superview.superview addSubview:progressBarView];
+		[content addSubview:progressBarView];
+		
+		[progressBarView.centerYAnchor constraintEqualToAnchor:label.centerYAnchor].active = true;
+		[progressBarView.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
+		[progressBarView.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
 	}
 }
 
