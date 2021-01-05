@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - test-build
+      - main
 jobs:
   build:
     name: Build App
@@ -71,7 +72,7 @@ jobs:
       with:
         tag_name: v${{ env.TWEAK_VER }}-beta
         release_name: Beta v${{ env.TWEAK_VER }}
-        draft: false
+        draft: true
         prerelease: true
         
     - name: Upload Release Asset
