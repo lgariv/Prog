@@ -268,5 +268,7 @@ extern dispatch_queue_t __BBServerQueue;
 
 	double fraction = [userInfo[@"fraction"] doubleValue];
 	[self.progressView setProgress:fraction animated:true];
+
+	if(fraction == 1) [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 %end
