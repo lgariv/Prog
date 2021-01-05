@@ -57,6 +57,7 @@ jobs:
         set -e
       env:
         ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
+
     - name: Delete Old Prerelease (if there are any)
       uses: dev-drprasad/delete-tag-and-release@v0.1.2
       if: ${{ env.OLD_PRE_TAG != 0 && steps.build_package.outputs.package != 0 }}
@@ -74,7 +75,7 @@ jobs:
       with:
         tag_name: v${{ env.TWEAK_VER }}-beta
         release_name: Beta v${{ env.TWEAK_VER }}
-        draft: true
+        draft: false
         prerelease: true
         
     - name: Upload Release Asset
