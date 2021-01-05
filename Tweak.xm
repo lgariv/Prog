@@ -88,26 +88,29 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 %property (nonatomic, strong) UIView *progressBarBackground;
 %property (nonatomic, strong) NSString *bundleId;
 
--(void)setFrame:(CGRect)arg1 {
+/*-(void)setFrame:(CGRect)arg1 {
 	%orig;
 	if (arg1.size.width != 0) {
 		[self setupSubviews];
 	}
-}
+}*/
 
 -(id)initWithFrame:(CGRect)arg1 {
     if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
 
 	if ((self = %orig)) {
 		self.progressBar = [[UIView alloc] init];
+        self.progressBar.translatesAutoresizingMaskIntoConstraints = false;
 		self.progressBar.backgroundColor = [UIColor colorWithRed:67.f/255.f green:130.f/255.f blue:232.f/255.f alpha:1.0f];
 		self.progressBar.layer.cornerRadius = 2.5;
 
 		self.progressBarBackground = [[UIView alloc] init];
+        self.progressBarBackground.translatesAutoresizingMaskIntoConstraints = false;
 		self.progressBarBackground.backgroundColor = UIColor.darkGrayColor;
 		self.progressBarBackground.layer.cornerRadius = 2.5;
 
 		self.progressLabel = [[UILabel alloc] init];
+        self.progressLabel.translatesAutoresizingMaskIntoConstraints = false;
 		self.progressLabel.font = [UIFont boldSystemFontOfSize:10];
 		self.progressLabel.textAlignment = NSTextAlignmentCenter;
 		self.progressLabel.text = @"0%%";
@@ -115,6 +118,8 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		[self addSubview: self.progressBarBackground];
 		[self addSubview: self.progressBar];
 		[self addSubview: self.progressLabel];
+
+        [self setupSubviews];
 	}
 	return self;
 }
@@ -157,34 +162,43 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 	%orig;
 	self.progressLabel.text = [NSString stringWithFormat:@"%i%%", (int)(arg1 * 100)];
 	self.progressLabel.textColor = [UIColor whiteColor];
-	[self.progressLabel sizeToFit];
+    for(NSLayoutConstraint *width in self.constraints){
+        if(width.firstAnchor == self.progressBar.widthAnchor || width.secondAnchor == self.progressBar.widthAnchor){
+            width.active = false;
+            break;
+        }
+    }
+
+    [NSLayoutConstraint constraintWithItem:self.progressBar attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:self.progressBarBackground attribute:NSLayoutAttributeWidth multiplier:CGFloat(arg1) constant:0].active = true;
 
     [progressDictionary[self.bundleId] setCompletedUnitCount:arg1 * 1000];
 }
 
--(void)_drawOutgoingCircleWithCenter:(CGPoint)arg1 {
+-(void)_drawOutgoingCircleWithCenter:(CGPoint)arg1 {}
 
-}
-
--(void)_drawIncomingCircleWithCenter:(CGPoint)arg1 {
-
-}
+-(void)_drawIncomingCircleWithCenter:(CGPoint)arg1 {}
 
 -(void)_drawPauseUIWithCenter:(CGPoint)arg1 {
 	%orig(CGPointMake(arg1.x, arg1.y - 10));
 }
 
--(void)_drawPieWithCenter:(CGPoint)arg1 {
-	self.progressLabel.center = CGPointMake(arg1.x, arg1.y + 7);
-	self.progressBar.frame = CGRectMake(PROGRESSBAR_INSET, self.frame.size.height - 12, (self.frame.size.width - PROGRESSBAR_INSET * 2) * self.displayedFraction, 5);
-	self.progressBarBackground.frame = CGRectMake(PROGRESSBAR_INSET, self.frame.size.height - 12, self.frame.size.width - PROGRESSBAR_INSET * 2, 5);
-}
+-(void)_drawPieWithCenter:(CGPoint)arg1 {}
 
 %new
 -(void)setupSubviews {
-	self.progressBarBackground.frame = CGRectMake(PROGRESSBAR_INSET, self.frame.size.height - 12, self.frame.size.width - PROGRESSBAR_INSET * 2, 5);
-	self.progressBar.frame = CGRectMake(PROGRESSBAR_INSET, self.frame.size.height - 12, (self.frame.size.width - PROGRESSBAR_INSET * 2) * self.displayedFraction, 5);
-	self.progressLabel.center = CGPointMake(self.frame.size.width / 2, self.frame.size.height / 2 + 7);
+	//self.progressBarBackground.frame = CGRectMake(PROGRESSBAR_INSET, self.frame.size.height - 12, self.frame.size.width - PROGRESSBAR_INSET * 2, 5);
+    [self.progressBarBackground.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:PROGRESSBAR_INSET].active = true;
+	[self.progressBarBackground.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-PROGRESSBAR_INSET].active = true;
+    [self.progressBarBackground.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-PROGRESSBAR_INSET].active = true;
+    [self.progressBarBackground.heightAnchor constraintEqualToConstant:5].active = true;
+
+    [self.progressBar.leadingAnchor constraintEqualToAnchor:self.progressBarBackground.leadingAnchor].active = true;
+    [self.progressBar.widthAnchor constraintEqualToConstant:0].active = true;
+    [self.progressBar.topAnchor constraintEqualToAnchor:self.progressBarBackground.topAnchor].active = true;
+    [self.progressBar.bottomAnchor constraintEqualToAnchor:self.progressBarBackground.bottomAnchor].active = true;
+
+    [self.progressLabel.centerXAnchor constraintEqualToAnchor:self.centerXAnchor].active = true;
+    [self.progressLabel.bottomAnchor constraintEqualToAnchor:self.progressBarBackground.topAnchor constant:-2].active = true;
 }
 %end
 
