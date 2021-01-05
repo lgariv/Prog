@@ -159,9 +159,6 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 	self.progressLabel.textColor = [UIColor whiteColor];
 	[self.progressLabel sizeToFit];
 
-	NSDictionary* userInfo = @{@"fraction": [NSNumber numberWithDouble: arg1], @"bundleId": self.bundleId};
-	[[NSNotificationCenter defaultCenter] postNotificationName:@"updateProgress" object:nil userInfo:userInfo];
-
     [progressDictionary[self.bundleId] setCompletedUnitCount:arg1 * 1000];
 }
 
