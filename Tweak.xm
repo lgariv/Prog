@@ -80,6 +80,8 @@ extern dispatch_queue_t __BBServerQueue;
 @property (nonatomic,readonly) __kindof SBIcon *icon;
 @end
 
+static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
+
 %hook SBIconProgressView
 %property (nonatomic, strong) UILabel *progressLabel;
 %property (nonatomic, strong) UIView *progressBar;
@@ -94,6 +96,8 @@ extern dispatch_queue_t __BBServerQueue;
 }
 
 -(id)initWithFrame:(CGRect)arg1 {
+    if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
+
 	if ((self = %orig)) {
 		self.progressBar = [[UIView alloc] init];
 		self.progressBar.backgroundColor = [UIColor colorWithRed:67.f/255.f green:130.f/255.f blue:232.f/255.f alpha:1.0f];
@@ -122,6 +126,7 @@ extern dispatch_queue_t __BBServerQueue;
 	if (viewview != nil) {
 		SBIcon *icon = [viewview icon];
 		self.bundleId = [icon isKindOfClass:NSClassFromString(@"SBLeafIcon")] ? MSHookIvar<NSString*>(icon, "_applicationBundleID") : icon.uniqueIdentifier;
+        progressDictionary[self.bundleId] = [NSProgress progressWithTotalUnitCount:1000];
 
 		BBBulletinRequest *bulletin = [[BBBulletinRequest alloc] init];
 		[bulletin setHeader:icon.displayName];
@@ -156,6 +161,8 @@ extern dispatch_queue_t __BBServerQueue;
 
 	NSDictionary* userInfo = @{@"fraction": [NSNumber numberWithDouble: arg1], @"bundleId": self.bundleId};
 	[[NSNotificationCenter defaultCenter] postNotificationName:@"updateProgress" object:nil userInfo:userInfo];
+
+    [progressDictionary[self.bundleId] setCompletedUnitCount:arg1 * 1000];
 }
 
 -(void)_drawOutgoingCircleWithCenter:(CGPoint)arg1 {
@@ -236,12 +243,10 @@ extern dispatch_queue_t __BBServerQueue;
 	%orig;
 
 	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
-		if(!self.progressView){
+		if(!self.progressView) {
 			self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-   			[self.progressView setProgress:0 animated:false];
-		}
-
-		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(receiveNotification:) name:@"updateProgress" object:nil];
+            self.progressView.observedProgress = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
+    	}
 		
 		NCNotificationContentView *content = ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView;
 		UILabel *label = content.secondaryLabel;
@@ -259,16 +264,5 @@ extern dispatch_queue_t __BBServerQueue;
 		[self.progressView.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
 		[self.progressView.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
 	}
-}
-
-%new
--(void)receiveNotification:(NSNotification *)notification {
-	NSDictionary* userInfo = notification.userInfo;
-	if(![userInfo[@"bundleId"] isEqualToString:[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]) return;
-
-	double fraction = [userInfo[@"fraction"] doubleValue];
-	[self.progressView setProgress:fraction animated:true];
-
-	if(fraction == 1) [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 %end
