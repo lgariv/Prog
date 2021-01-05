@@ -3,7 +3,7 @@ include $(THEOS)/makefiles/common.mk
 
 export FINALPACKAGE = 1
 DEBUG = 0
-export ARCHS = arm64 #arm64e
+export ARCHS = arm64 arm64e
 
 TWEAK_NAME = DownloadBar14
 
