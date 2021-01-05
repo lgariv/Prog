@@ -232,19 +232,15 @@ extern dispatch_queue_t __BBServerQueue;
 %hook NCNotificationShortLookViewController
 %property(nonatomic, strong) UIProgressView *progressView;
 
--(void)viewDidLoad{
-	%orig;
-	
-	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
-		self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-		[self.progressView setProgress:0 animated:false];
-	}
-}
-
 -(void)viewWillAppear:(BOOL)animated{
 	%orig;
 
 	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+		if(!self.progressView){
+			self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+   			[self.progressView setProgress:0 animated:false];
+		}
+
 		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(receiveNotification:) name:@"updateProgress" object:nil];
 		
 		NCNotificationContentView *content = ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView;
