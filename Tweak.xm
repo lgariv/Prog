@@ -222,6 +222,8 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 @property NCNotificationRequest *notificationRequest;
 
 @property UIProgressView *progressView;
+
+-(void)resetContent;
 @end
 
 @interface NCNotificationShortLookViewController : NCNotificationViewController
@@ -275,6 +277,12 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		[self.progressView.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
 	}
 }
+
+%new
+-(void)resetContent{
+    [self.progressView removeFromSuperview];
+    ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView.secondaryLabel.hidden = false;
+}
 %end
 
 %hook NCNotificationLongLookViewController
@@ -282,6 +290,8 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 -(void)viewWillAppear:(BOOL)animated{
 	%orig;
+
+    [self.progressView removeFromSuperview];
 
 	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
 		if(!self.progressView) {
@@ -298,12 +308,35 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		self.progressView.progressTintColor = [UIColor systemBlueColor];
 		self.progressView.trackTintColor = [UIColor lightGrayColor];
 		
-		[self.progressView removeFromSuperview];
 		[content addSubview:self.progressView];
 		
 		[self.progressView.centerYAnchor constraintEqualToAnchor:label.centerYAnchor].active = true;
 		[self.progressView.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
 		[self.progressView.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
 	}
+}
+
+%new
+-(void)resetContent{
+    [self.progressView removeFromSuperview];
+    MSHookIvar<NCNotificationContentView*>(MSHookIvar<NCNotificationLongLookView*>(self, "_lookView"), "_notificationContentView").secondaryTextView.hidden = false;
+}
+%end
+
+@interface NCNotificationListCell : UIView
+@property NCNotificationViewController *contentViewController;
+@end
+
+%hook NCNotificationListCell
+-(void)didMoveToSuperview{
+    %orig;
+
+    if(![self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) [self.contentViewController resetContent];
+}
+
+-(void)didMoveToWindow{
+    %orig;
+
+    if(![self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) [self.contentViewController resetContent];
 }
 %end
