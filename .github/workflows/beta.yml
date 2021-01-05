@@ -1,12 +1,14 @@
 name: Beta 
-on:
-  push:
-    branches:
-      - test-build
-      - main
+on: [push]
+#   push:
+#     branches:
+#       - test-build
+#       - main
+env:
+  DEVELOPER_DIR: /Applications/Xcode_11.7.app/Contents/Developer
 jobs:
   build:
-    name: Build App
+    name: Build Tweak
     runs-on: macOS-latest
     env:
       THEOS: theos
