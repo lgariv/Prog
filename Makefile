@@ -12,7 +12,5 @@ DownloadBar14_FILES = Tweak.xm
 DownloadBar14_FRAMEWORKS = Foundation UIKit UserNotifications QuartzCore
 DownloadBar14_PRIVATE_FRAMEWORKS = BulletinBoard
 DownloadBar14_CFLAGS = -O2 -fobjc-arc
-DownloadBar14_FRAMEWORKS = Foundation UIKit UserNotifications QuartzCore
-DownloadBar14_PRIVATE_FRAMEWORKS = BulletinBoard
 
 include $(THEOS_MAKE_PATH)/tweak.mk
