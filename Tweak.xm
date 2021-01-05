@@ -277,6 +277,7 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		[self.progressView.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
 	}
 }
+%end
 
 %new
 -(void)resetContent{
