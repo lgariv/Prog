@@ -208,16 +208,26 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 @interface NCNotificationContentView : UIView
 @property(getter=_secondaryLabel,nonatomic,readonly) UILabel *secondaryLabel;
+@property(getter=_secondaryTextView,nonatomic,readonly) UITextView *secondaryTextView;
 @end
 
 @interface NCNotificationShortLookView : PLPlatterView
 @property(getter=_notificationContentView,nonatomic,readonly) NCNotificationContentView *notificationContentView;
 @end
 
-@interface NCNotificationShortLookViewController : UIViewController
+@interface NCNotificationLongLookView : UIView
+@end
+
+@interface NCNotificationViewController : UIViewController
 @property NCNotificationRequest *notificationRequest;
 
 @property UIProgressView *progressView;
+@end
+
+@interface NCNotificationShortLookViewController : NCNotificationViewController
+@end
+
+@interface NCNotificationLongLookViewController : NCNotificationViewController
 @end
 
 %hook BBBulletin
@@ -250,6 +260,37 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		
 		NCNotificationContentView *content = ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView;
 		UILabel *label = content.secondaryLabel;
+		label.hidden = true;
+		
+		self.progressView.translatesAutoresizingMaskIntoConstraints = false;
+		
+		self.progressView.progressTintColor = [UIColor systemBlueColor];
+		self.progressView.trackTintColor = [UIColor lightGrayColor];
+		
+		[self.progressView removeFromSuperview];
+		[content addSubview:self.progressView];
+		
+		[self.progressView.centerYAnchor constraintEqualToAnchor:label.centerYAnchor].active = true;
+		[self.progressView.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
+		[self.progressView.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
+	}
+}
+%end
+
+%hook NCNotificationLongLookViewController
+%property(nonatomic, strong) UIProgressView *progressView;
+
+-(void)viewWillAppear:(BOOL)animated{
+	%orig;
+
+	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+		if(!self.progressView) {
+			self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+            self.progressView.observedProgress = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
+    	}
+		
+		NCNotificationContentView *content = MSHookIvar<NCNotificationContentView*>(MSHookIvar<NCNotificationLongLookView*>(self, "_lookView"), "_notificationContentView");
+		UITextView *label = content.secondaryTextView;
 		label.hidden = true;
 		
 		self.progressView.translatesAutoresizingMaskIntoConstraints = false;
