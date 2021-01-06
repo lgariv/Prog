@@ -58,6 +58,16 @@ extern dispatch_queue_t __BBServerQueue;
 
 #define PROGRESSBAR_INSET 7
 
+@interface SBApplication : NSObject
+@property NSString *displayName;
+@end
+
+@interface SBApplicationController : NSObject
+-(SBApplication*)applicationWithBundleIdentifier:(NSString*)identifier;
+
++(instancetype)sharedInstance;
+@end
+
 @interface SBIconProgressView : UIView
 @property (nonatomic, strong) UILabel *progressLabel;
 @property (nonatomic, strong) UIView *progressBar;
@@ -89,8 +99,6 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 %property (nonatomic, strong) NSString *bundleId;
 
 -(id)initWithFrame:(CGRect)arg1 {
-	if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
-
 	if ((self = %orig)) {
 		self.progressBar = [[UIView alloc] init];
 		self.progressBar.translatesAutoresizingMaskIntoConstraints = false;
@@ -117,40 +125,6 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 	return self;
 }
 
--(void)didMoveToSuperview{
-	%orig;
-	
-	SBIconImageView *viewview = (SBIconImageView*)self.superview;
-	if (viewview != nil) {
-		SBIcon *icon = [viewview icon];
-		self.bundleId = [icon isKindOfClass:NSClassFromString(@"SBLeafIcon")] ? MSHookIvar<NSString*>(icon, "_applicationBundleID") : icon.uniqueIdentifier;
-		progressDictionary[self.bundleId] = [NSProgress progressWithTotalUnitCount:1000];
-
-		BBBulletinRequest *bulletin = [[BBBulletinRequest alloc] init];
-		[bulletin setHeader:icon.displayName];
-		[bulletin setTitle:@"Downloading"];
-		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar"];
-		
-		NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
-		
-		//Temporary Fix because AppStore Notifications don't work on my device
-		//[bulletin setSection:@"com.apple.AppStore"];
-		//[bulletin setSectionID:@"com.apple.AppStore"];
-		[bulletin setSection:@"com.apple.Preferences"];
-		[bulletin setSectionID:@"com.apple.Preferences"];
-		
-		[bulletin setBulletinID:bulletinUUID];
-		[bulletin setRecordID:bulletinUUID];
-		[bulletin setThreadID:self.bundleId];
-		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14/%@", self.bundleId]];
-		[bulletin setDate:[NSDate date]];
-		
-		dispatch_async(__BBServerQueue, ^{
-			[sharedServer publishBulletinRequest:bulletin destinations:2];
-		});
-	}
-}
-
 -(void)setDisplayedFraction:(double)arg1 {
 	%orig;
 	self.progressLabel.text = [NSString stringWithFormat:@"%i%%", (int)(arg1 * 100)];
@@ -163,8 +137,6 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 	}
 
 	[NSLayoutConstraint constraintWithItem:self.progressBar attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:self.progressBarBackground attribute:NSLayoutAttributeWidth multiplier:CGFloat(arg1) constant:0].active = true;
-
-    [progressDictionary[self.bundleId] setCompletedUnitCount:arg1 * 1000];
 }
 
 -(void)_drawOutgoingCircleWithCenter:(CGPoint)arg1 {}
@@ -194,9 +166,92 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 }
 %end
 
+
+
+/*	<================================================================================================================================>	*/
+
+
+
+@protocol FBSApplicationPlaceholderProgress <NSObject>
+@end
+
+@interface FBSApplicationPlaceholderProgress : NSObject <FBSApplicationPlaceholderProgress>
+@end
+
+@interface FBSApplicationPlaceholder : NSObject
+@property(nonatomic) NSMutableDictionary *dict;
+
+@property NSString *bundleIdentifier;
+@property(nonatomic, readonly, strong) NSObject<FBSApplicationPlaceholderProgress> *progress;
+@end
+
+%hook FBSApplicationPlaceholder
+%property(nonatomic) NSMutableDictionary *dict;
+
+-(instancetype)_initWithApplicationProxy:(id)proxy{
+	FBSApplicationPlaceholder *instance = %orig;
+
+	if([instance.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]){
+		if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
+
+		progressDictionary[instance.bundleIdentifier] = MSHookIvar<NSProgress*>(instance.progress, "_progress");
+
+		BBBulletinRequest *bulletin = [[BBBulletinRequest alloc] init];
+		[bulletin setHeader:[[%c(SBApplicationController) sharedInstance] applicationWithBundleIdentifier:instance.bundleIdentifier].displayName];
+		[bulletin setTitle:@"Downloading"];
+		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar"];
+		
+		NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
+		
+		[bulletin setSection:@"com.apple.Preferences"];
+		[bulletin setSectionID:@"com.apple.Preferences"];
+		
+		[bulletin setBulletinID:bulletinUUID];
+		[bulletin setRecordID:bulletinUUID];
+		[bulletin setThreadID:instance.bundleIdentifier];
+		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14/%@", instance.bundleIdentifier]];
+		[bulletin setDate:[NSDate date]];
+		
+		dispatch_async(__BBServerQueue, ^{
+			[sharedServer publishBulletinRequest:bulletin destinations:2];
+		});
+	}
+	self.dict = progressDictionary;
+	return instance;
+}
+%end
+
+
+
+/*	<================================================================================================================================>	*/
+
+
+
 @interface UIImage()
 +(instancetype)_applicationIconImageForBundleIdentifier:(NSString*)bundleId format:(int)format;
 @end
+
+%hook BBBulletin
+-(BBSectionIcon *)sectionIcon{
+	if ([self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+		UIImage *img = [UIImage _applicationIconImageForBundleIdentifier:[self.publisherBulletinID substringFromIndex:[self.publisherBulletinID rangeOfString:@"/"].location + 1] format:1];
+
+		BBSectionIconVariant *variant = [[BBSectionIconVariant alloc] init];
+		[variant setImageData:UIImagePNGRepresentation(img)];
+
+		BBSectionIcon *icon = [[BBSectionIcon alloc] init];
+		[icon addVariant:variant];
+
+		return icon;
+	} else return %orig;
+}
+%end
+
+
+
+/*	<================================================================================================================================>	*/
+
+
 
 @interface PLPlatterView : UIView
 @end
@@ -234,22 +289,6 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 @interface NCNotificationLongLookViewController : NCNotificationViewController
 @end
-
-%hook BBBulletin
--(BBSectionIcon *)sectionIcon{
-	if ([self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
-		UIImage *img = [UIImage _applicationIconImageForBundleIdentifier:[self.publisherBulletinID substringFromIndex:[self.publisherBulletinID rangeOfString:@"/"].location + 1] format:1];
-
-		BBSectionIconVariant *variant = [[BBSectionIconVariant alloc] init];
-		[variant setImageData:UIImagePNGRepresentation(img)];
-
-		BBSectionIcon *icon = [[BBSectionIcon alloc] init];
-		[icon addVariant:variant];
-
-		return icon;
-	} else return %orig;
-}
-%end
 
 %hook NCNotificationShortLookViewController
 %property(nonatomic, strong) UIProgressView *progressView;
