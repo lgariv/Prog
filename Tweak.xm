@@ -299,9 +299,10 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
 		if(!self.progressView) {
 			self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-			self.progressView.observedProgress = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
 		}
 		
+		self.progressView.observedProgress = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
+
 		NCNotificationContentView *content = ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView;
 		UILabel *label = content.secondaryLabel;
 		label.hidden = true;
@@ -338,9 +339,10 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
 		if(!self.progressView) {
 			self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-			self.progressView.observedProgress = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
 		}
 		
+		self.progressView.observedProgress = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
+
 		NCNotificationContentView *content = MSHookIvar<NCNotificationContentView*>(MSHookIvar<NCNotificationLongLookView*>(self, "_lookView"), "_notificationContentView");
 		UITextView *label = content.secondaryTextView;
 		label.hidden = true;
@@ -373,12 +375,20 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 -(void)didMoveToSuperview{
 	%orig;
 
-	if(![self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) [self.contentViewController resetContent];
+	if([self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+		self.contentViewController.progressView.observedProgress = progressDictionary[[self.contentViewController.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.contentViewController.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
+	} else{
+		[self.contentViewController resetContent];
+	}
 }
 
 -(void)didMoveToWindow{
 	%orig;
 
-	if(![self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) [self.contentViewController resetContent];
+	if([self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+		self.contentViewController.progressView.observedProgress = progressDictionary[[self.contentViewController.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.contentViewController.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
+	} else{
+		[self.contentViewController resetContent];
+	}
 }
 %end
