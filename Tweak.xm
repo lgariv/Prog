@@ -89,21 +89,21 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 %property (nonatomic, strong) NSString *bundleId;
 
 -(id)initWithFrame:(CGRect)arg1 {
-    if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
+	if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
 
 	if ((self = %orig)) {
 		self.progressBar = [[UIView alloc] init];
-        self.progressBar.translatesAutoresizingMaskIntoConstraints = false;
+		self.progressBar.translatesAutoresizingMaskIntoConstraints = false;
 		self.progressBar.backgroundColor = [UIColor colorWithRed:67.f/255.f green:130.f/255.f blue:232.f/255.f alpha:1.0f];
 		self.progressBar.layer.cornerRadius = 2.5;
 
 		self.progressBarBackground = [[UIView alloc] init];
-        self.progressBarBackground.translatesAutoresizingMaskIntoConstraints = false;
+		self.progressBarBackground.translatesAutoresizingMaskIntoConstraints = false;
 		self.progressBarBackground.backgroundColor = UIColor.darkGrayColor;
 		self.progressBarBackground.layer.cornerRadius = 2.5;
 
 		self.progressLabel = [[UILabel alloc] init];
-        self.progressLabel.translatesAutoresizingMaskIntoConstraints = false;
+		self.progressLabel.translatesAutoresizingMaskIntoConstraints = false;
 		self.progressLabel.font = [UIFont boldSystemFontOfSize:10];
 		self.progressLabel.textAlignment = NSTextAlignmentCenter;
 		self.progressLabel.text = @"0%%";
@@ -112,7 +112,7 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		[self addSubview: self.progressBar];
 		[self addSubview: self.progressLabel];
 
-        [self setupSubviews];
+		[self setupSubviews];
 	}
 	return self;
 }
@@ -124,7 +124,7 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 	if (viewview != nil) {
 		SBIcon *icon = [viewview icon];
 		self.bundleId = [icon isKindOfClass:NSClassFromString(@"SBLeafIcon")] ? MSHookIvar<NSString*>(icon, "_applicationBundleID") : icon.uniqueIdentifier;
-        progressDictionary[self.bundleId] = [NSProgress progressWithTotalUnitCount:1000];
+		progressDictionary[self.bundleId] = [NSProgress progressWithTotalUnitCount:1000];
 
 		BBBulletinRequest *bulletin = [[BBBulletinRequest alloc] init];
 		[bulletin setHeader:icon.displayName];
@@ -155,14 +155,14 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 	%orig;
 	self.progressLabel.text = [NSString stringWithFormat:@"%i%%", (int)(arg1 * 100)];
 	self.progressLabel.textColor = [UIColor whiteColor];
-    for(NSLayoutConstraint *width in self.constraints){
-        if(width.firstAnchor == self.progressBar.widthAnchor || width.secondAnchor == self.progressBar.widthAnchor){
-            width.active = false;
-            break;
-        }
-    }
+	for(NSLayoutConstraint *width in self.constraints){
+		if(width.firstAnchor == self.progressBar.widthAnchor || width.secondAnchor == self.progressBar.widthAnchor){
+			width.active = false;
+			break;
+		}
+	}
 
-    [NSLayoutConstraint constraintWithItem:self.progressBar attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:self.progressBarBackground attribute:NSLayoutAttributeWidth multiplier:CGFloat(arg1) constant:0].active = true;
+	[NSLayoutConstraint constraintWithItem:self.progressBar attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:self.progressBarBackground attribute:NSLayoutAttributeWidth multiplier:CGFloat(arg1) constant:0].active = true;
 
     [progressDictionary[self.bundleId] setCompletedUnitCount:arg1 * 1000];
 }
@@ -179,18 +179,18 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 %new
 -(void)setupSubviews {
-    [self.progressBarBackground.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:PROGRESSBAR_INSET].active = true;
+	[self.progressBarBackground.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:PROGRESSBAR_INSET].active = true;
 	[self.progressBarBackground.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-PROGRESSBAR_INSET].active = true;
-    [self.progressBarBackground.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-PROGRESSBAR_INSET].active = true;
-    [self.progressBarBackground.heightAnchor constraintEqualToConstant:5].active = true;
+	[self.progressBarBackground.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-PROGRESSBAR_INSET].active = true;
+	[self.progressBarBackground.heightAnchor constraintEqualToConstant:5].active = true;
 
-    [self.progressBar.leadingAnchor constraintEqualToAnchor:self.progressBarBackground.leadingAnchor].active = true;
-    [self.progressBar.widthAnchor constraintEqualToConstant:0].active = true;
-    [self.progressBar.topAnchor constraintEqualToAnchor:self.progressBarBackground.topAnchor].active = true;
-    [self.progressBar.bottomAnchor constraintEqualToAnchor:self.progressBarBackground.bottomAnchor].active = true;
+	[self.progressBar.leadingAnchor constraintEqualToAnchor:self.progressBarBackground.leadingAnchor].active = true;
+	[self.progressBar.widthAnchor constraintEqualToConstant:0].active = true;
+	[self.progressBar.topAnchor constraintEqualToAnchor:self.progressBarBackground.topAnchor].active = true;
+	[self.progressBar.bottomAnchor constraintEqualToAnchor:self.progressBarBackground.bottomAnchor].active = true;
 
-    [self.progressLabel.centerXAnchor constraintEqualToAnchor:self.centerXAnchor].active = true;
-    [self.progressLabel.bottomAnchor constraintEqualToAnchor:self.progressBarBackground.topAnchor constant:-2].active = true;
+	[self.progressLabel.centerXAnchor constraintEqualToAnchor:self.centerXAnchor].active = true;
+	[self.progressLabel.bottomAnchor constraintEqualToAnchor:self.progressBarBackground.topAnchor constant:-2].active = true;
 }
 %end
 
@@ -260,8 +260,8 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
 		if(!self.progressView) {
 			self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-            self.progressView.observedProgress = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
-    	}
+			self.progressView.observedProgress = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
+		}
 		
 		NCNotificationContentView *content = ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView;
 		UILabel *label = content.secondaryLabel;
@@ -283,8 +283,8 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 %new
 -(void)resetContent{
-    [self.progressView removeFromSuperview];
-    ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView.secondaryLabel.hidden = false;
+	[self.progressView removeFromSuperview];
+	((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView.secondaryLabel.hidden = false;
 }
 %end
 
@@ -294,13 +294,13 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 -(void)viewWillAppear:(BOOL)animated{
 	%orig;
 
-    [self.progressView removeFromSuperview];
+	[self.progressView removeFromSuperview];
 
 	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
 		if(!self.progressView) {
 			self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-            self.progressView.observedProgress = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
-    	}
+			self.progressView.observedProgress = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
+		}
 		
 		NCNotificationContentView *content = MSHookIvar<NCNotificationContentView*>(MSHookIvar<NCNotificationLongLookView*>(self, "_lookView"), "_notificationContentView");
 		UITextView *label = content.secondaryTextView;
@@ -321,8 +321,8 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 %new
 -(void)resetContent{
-    [self.progressView removeFromSuperview];
-    MSHookIvar<NCNotificationContentView*>(MSHookIvar<NCNotificationLongLookView*>(self, "_lookView"), "_notificationContentView").secondaryTextView.hidden = false;
+	[self.progressView removeFromSuperview];
+	MSHookIvar<NCNotificationContentView*>(MSHookIvar<NCNotificationLongLookView*>(self, "_lookView"), "_notificationContentView").secondaryTextView.hidden = false;
 }
 %end
 
@@ -332,14 +332,14 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 %hook NCNotificationListCell
 -(void)didMoveToSuperview{
-    %orig;
+	%orig;
 
-    if(![self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) [self.contentViewController resetContent];
+	if(![self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) [self.contentViewController resetContent];
 }
 
 -(void)didMoveToWindow{
-    %orig;
+	%orig;
 
-    if(![self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) [self.contentViewController resetContent];
+	if(![self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) [self.contentViewController resetContent];
 }
 %end
