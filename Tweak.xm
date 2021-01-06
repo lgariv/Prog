@@ -88,13 +88,6 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 %property (nonatomic, strong) UIView *progressBarBackground;
 %property (nonatomic, strong) NSString *bundleId;
 
-/*-(void)setFrame:(CGRect)arg1 {
-	%orig;
-	if (arg1.size.width != 0) {
-		[self setupSubviews];
-	}
-}*/
-
 -(id)initWithFrame:(CGRect)arg1 {
     if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
 
@@ -186,7 +179,6 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 %new
 -(void)setupSubviews {
-	//self.progressBarBackground.frame = CGRectMake(PROGRESSBAR_INSET, self.frame.size.height - 12, self.frame.size.width - PROGRESSBAR_INSET * 2, 5);
     [self.progressBarBackground.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:PROGRESSBAR_INSET].active = true;
 	[self.progressBarBackground.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-PROGRESSBAR_INSET].active = true;
     [self.progressBarBackground.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-PROGRESSBAR_INSET].active = true;
