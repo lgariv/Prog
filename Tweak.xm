@@ -137,6 +137,12 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 	[NSLayoutConstraint constraintWithItem:self.progressBar attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:self.progressBarBackground attribute:NSLayoutAttributeWidth multiplier:CGFloat(arg1) constant:0].active = true;
 }
 
+-(void)_drawOutgoingCircleWithCenter:(CGPoint)arg1 {}
+
+-(void)_drawIncomingCircleWithCenter:(CGPoint)arg1 {}
+
+-(void)_drawPieWithCenter:(CGPoint)arg1 {}
+
 -(void)_drawPauseUIWithCenter:(CGPoint)arg1 {
 	%orig(CGPointMake(arg1.x, arg1.y - 10));
 }
