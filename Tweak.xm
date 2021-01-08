@@ -172,6 +172,10 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 
 
+@interface LSApplicationProxy : NSObject
+@property(nonatomic, readonly, strong) NSString *applicationIdentifier;
+@end
+
 @protocol FBSApplicationPlaceholderProgress <NSObject>
 @end
 
@@ -179,25 +183,44 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 @end
 
 @interface FBSApplicationPlaceholder : NSObject
-@property(nonatomic) NSMutableDictionary *dict;
-
 @property NSString *bundleIdentifier;
 @property(nonatomic, readonly, strong) NSObject<FBSApplicationPlaceholderProgress> *progress;
 @end
 
 %hook FBSApplicationPlaceholder
-%property(nonatomic) NSMutableDictionary *dict;
-
 -(instancetype)_initWithApplicationProxy:(id)proxy{
 	FBSApplicationPlaceholder *instance = %orig;
+	
+	[[NSNotificationCenter defaultCenter] addObserver:instance selector:@selector(installsStarted:) name:@"installsStarted" object:nil];
 
-	if([instance.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]){
+	return instance;
+}
+
+%new
+-(void)installsStarted:(NSNotification*)notification{
+	NSArray<NSString*> *identifiers = notification.userInfo[@"identifiers"];
+
+	/*NSString *desc = [NSString stringWithFormat:@"%@", self.progress];
+
+	#pragma clang diagnostic push
+	#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+	
+	dispatch_async(dispatch_get_main_queue(), ^{
+		UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"" message:[NSString stringWithFormat:@"%@", desc] preferredStyle:UIAlertControllerStyleAlert];
+		UIAlertAction* dismissAction = [UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleCancel handler:^(UIAlertAction * action) {}];
+		[alert addAction:dismissAction];
+		[[[UIApplication sharedApplication] keyWindow].rootViewController presentViewController:alert animated:YES completion:nil];
+	});
+	
+	#pragma clang diagnostic pop*/
+
+	if([identifiers containsObject:self.bundleIdentifier] && [self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]){
 		if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
 
-		progressDictionary[instance.bundleIdentifier] = MSHookIvar<NSProgress*>(instance.progress, "_progress");
+		progressDictionary[self.bundleIdentifier] = MSHookIvar<NSProgress*>(self.progress, "_progress");
 
 		BBBulletinRequest *bulletin = [[BBBulletinRequest alloc] init];
-		[bulletin setHeader:[[%c(SBApplicationController) sharedInstance] applicationWithBundleIdentifier:instance.bundleIdentifier].displayName];
+		[bulletin setHeader:[[%c(SBApplicationController) sharedInstance] applicationWithBundleIdentifier:self.bundleIdentifier].displayName];
 		[bulletin setTitle:@"Downloading"];
 		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar"];
 		
@@ -208,16 +231,41 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		
 		[bulletin setBulletinID:bulletinUUID];
 		[bulletin setRecordID:bulletinUUID];
-		[bulletin setThreadID:instance.bundleIdentifier];
-		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14/%@", instance.bundleIdentifier]];
+		[bulletin setThreadID:self.bundleIdentifier];
+		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14/%@", self.bundleIdentifier]];
 		[bulletin setDate:[NSDate date]];
 		
 		dispatch_async(__BBServerQueue, ^{
 			[sharedServer publishBulletinRequest:bulletin destinations:2];
 		});
 	}
-	self.dict = progressDictionary;
-	return instance;
+}
+%end
+
+%hook FBSApplicationLibrary
+-(void)applicationInstallsDidStart:(id)installs{
+	%orig;
+
+	//[[NSNotificationCenter defaultCenter] postNotificationName:@"installsStarted" object:nil userInfo:@{}];
+
+	NSMutableArray<NSString*> *identifiers = [[NSMutableArray alloc] init];
+	for(LSApplicationProxy *proxy in installs){
+		[identifiers addObject:proxy.applicationIdentifier];
+	}
+
+	[[NSNotificationCenter defaultCenter] postNotificationName:@"installsStarted" object:nil userInfo:@{@"identifiers": identifiers}];
+
+	/*#pragma clang diagnostic push
+	#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+	
+	dispatch_async(dispatch_get_main_queue(), ^{
+		UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"" message:[NSString stringWithFormat:@"%@", installs] preferredStyle:UIAlertControllerStyleAlert];
+		UIAlertAction* dismissAction = [UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleCancel handler:^(UIAlertAction * action) {}];
+		[alert addAction:dismissAction];
+		[[[UIApplication sharedApplication] keyWindow].rootViewController presentViewController:alert animated:YES completion:nil];
+	});
+	
+	#pragma clang diagnostic pop*/
 }
 %end
 
