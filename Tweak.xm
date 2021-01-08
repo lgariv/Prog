@@ -44,12 +44,7 @@
 -(BOOL)prioritizeAtTopOfLockScreen ;
 @end
 
-@interface BBBulletinRequest : BBBulletin
--(void)generateNewBulletinID;
-@end
-
 @interface BBServer : NSObject
--(void)publishBulletinRequest:(BBBulletinRequest*)arg1 destinations:(unsigned long long)arg2;
 -(void)publishBulletin:(BBBulletin*)arg1 destinations:(unsigned long long)arg2;
 @end
 
@@ -232,28 +227,19 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14/%@", self.bundleIdentifier]];
 		[bulletin setDate:[NSDate date]];
 
-		// dispatch_async(dispatch_get_main_queue(), ^{
-			NSString *appInfoUrl = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@", self.bundleIdentifier];
+		NSString *appInfoUrl = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@", self.bundleIdentifier];
 
-			NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:appInfoUrl]];
+		NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:appInfoUrl]];
 
-			NSError *e = nil;
-			NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error: &e];
+		NSError *e = nil;
+		NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error: &e];
 
-			NSString *trackViewUrl = [[[jsonDict objectForKey:@"results"] objectAtIndex:0] objectForKey:@"trackViewUrl"];
+		NSString *trackViewUrl = [[[jsonDict objectForKey:@"results"] objectAtIndex:0] objectForKey:@"trackViewUrl"];
 
-			BBAction *defaultAction = [BBAction actionWithLaunchURL:[NSURL URLWithString:trackViewUrl]];
-			[defaultAction setCanBypassPinLock:YES];
-			[defaultAction setShouldDismissBulletin:NO];
-			[bulletin setDefaultAction:defaultAction];
-		// });
-
-		// dispatch_async(dispatch_get_main_queue(), ^{
-		// 	NSURL *URL = [NSURL URLWithString:@"https://apps.apple.com/us/app/apple-music/id1108187390"];
-		// 	NSLog(@"[DownloadBar] self.bundleURL", self.bundleURL);
-		// 	[[UIApplication sharedApplication] openURL:self.bundleURL];
-		// 	[[objc_getClass("SBLockScreenManager") sharedInstance] lockScreenViewControllerRequestsUnlock];
-		// });
+		BBAction *defaultAction = [BBAction actionWithLaunchURL:[NSURL URLWithString:trackViewUrl]];
+		[defaultAction setCanBypassPinLock:YES];
+		[defaultAction setShouldDismissBulletin:NO];
+		[bulletin setDefaultAction:defaultAction];
 
 		dispatch_async(__BBServerQueue, ^{
 			[sharedServer publishBulletin:bulletin destinations:2];
@@ -389,7 +375,7 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		UITextView *label = content.secondaryTextView;
 		label.hidden = true;
 		
-		self.progressView.translatesAutoresizingMaskIntoConstraints = false;
+		self.progressView.translatesAutoresizingMaskIntoConstraints = true;
 		
 		self.progressView.progressTintColor = [UIColor systemBlueColor];
 		self.progressView.trackTintColor = [UIColor lightGrayColor];
