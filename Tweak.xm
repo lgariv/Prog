@@ -198,6 +198,7 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 	FBSApplicationPlaceholder *instance = %orig;
 	
 	[[NSNotificationCenter defaultCenter] addObserver:instance selector:@selector(installsStarted:) name:@"installsStarted" object:nil];
+	[[NSNotificationCenter defaultCenter] addObserver:instance selector:@selector(installsFinished:) name:@"installsFinished" object:nil];
 
 	return instance;
 }
@@ -243,7 +244,47 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 		dispatch_async(__BBServerQueue, ^{
 			[sharedServer publishBulletin:bulletin destinations:2];
+%new
+-(void)installsFinished:(NSNotification*)notification{
+	NSArray<NSString*> *identifiers = notification.userInfo[@"identifiers"];
+
+	if([identifiers containsObject:self.bundleIdentifier] && [self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]){
+		BBBulletin *bulletin = [[BBBulletin alloc] init];
+		[bulletin setHeader:self.displayName];
+		[bulletin setTitle:@"Download Completed"];
+		[bulletin setMessage:[NSString stringWithFormat:@"%@ has finished installing", self.displayName]];
+		
+		NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
+		
+		[bulletin setSection:@"com.apple.Preferences"];
+		[bulletin setSectionID:@"com.apple.Preferences"];
+		
+		[bulletin setBulletinID:bulletinUUID];
+		[bulletin setRecordID:bulletinUUID];
+		[bulletin setThreadID:self.bundleIdentifier];
+		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14/%@", self.bundleIdentifier]];
+		[bulletin setDate:[NSDate date]];
+
+		NSString *appInfoUrl = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@", self.bundleIdentifier];
+
+		NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:appInfoUrl]];
+
+		NSError *e = nil;
+		NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error: &e];
+
+		NSString *trackViewUrl = [[[jsonDict objectForKey:@"results"] objectAtIndex:0] objectForKey:@"trackViewUrl"];
+
+		BBAction *defaultAction = [BBAction actionWithLaunchURL:[NSURL URLWithString:trackViewUrl]];
+		[defaultAction setCanBypassPinLock:YES];
+		[defaultAction setShouldDismissBulletin:YES];
+		[bulletin setDefaultAction:defaultAction];
+
+		dispatch_async(__BBServerQueue, ^{
+			[sharedServer publishBulletin:bulletin destinations:8];
 		});
+
+		[[NSNotificationCenter defaultCenter] removeObserver:self name:@"installsStarted" object:nil];
+		[[NSNotificationCenter defaultCenter] removeObserver:self name:@"installsFinished" object:nil];
 	}
 }
 %end
@@ -258,6 +299,17 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 	}
 
 	[[NSNotificationCenter defaultCenter] postNotificationName:@"installsStarted" object:nil userInfo:@{@"identifiers": identifiers}];
+}
+
+-(void)applicationsDidInstall:(id)applications{
+	%orig;
+
+	NSMutableArray<NSString*> *identifiers = [[NSMutableArray alloc] init];
+	for(LSApplicationProxy *proxy in applications){
+		[identifiers addObject:proxy.applicationIdentifier];
+	}
+
+	[[NSNotificationCenter defaultCenter] postNotificationName:@"installsFinished" object:nil userInfo:@{@"identifiers": identifiers}];
 }
 %end
 
