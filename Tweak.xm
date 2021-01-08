@@ -137,6 +137,12 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 	[NSLayoutConstraint constraintWithItem:self.progressBar attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:self.progressBarBackground attribute:NSLayoutAttributeWidth multiplier:CGFloat(arg1) constant:0].active = true;
 }
 
+-(void)_drawOutgoingCircleWithCenter:(CGPoint)arg1 {}
+
+-(void)_drawIncomingCircleWithCenter:(CGPoint)arg1 {}
+
+-(void)_drawPieWithCenter:(CGPoint)arg1 {}
+
 -(void)_drawPauseUIWithCenter:(CGPoint)arg1 {
 	%orig(CGPointMake(arg1.x, arg1.y - 10));
 }
@@ -192,20 +198,6 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 -(void)installsStarted:(NSNotification*)notification{
 	NSArray<NSString*> *identifiers = notification.userInfo[@"identifiers"];
 
-	/*NSString *desc = [NSString stringWithFormat:@"%@", self.progress];
-
-	#pragma clang diagnostic push
-	#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-	
-	dispatch_async(dispatch_get_main_queue(), ^{
-		UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"" message:[NSString stringWithFormat:@"%@", desc] preferredStyle:UIAlertControllerStyleAlert];
-		UIAlertAction* dismissAction = [UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleCancel handler:^(UIAlertAction * action) {}];
-		[alert addAction:dismissAction];
-		[[[UIApplication sharedApplication] keyWindow].rootViewController presentViewController:alert animated:YES completion:nil];
-	});
-	
-	#pragma clang diagnostic pop*/
-
 	if([identifiers containsObject:self.bundleIdentifier] && [self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]){
 		if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
 
@@ -238,26 +230,12 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 -(void)applicationInstallsDidStart:(id)installs{
 	%orig;
 
-	//[[NSNotificationCenter defaultCenter] postNotificationName:@"installsStarted" object:nil userInfo:@{}];
-
 	NSMutableArray<NSString*> *identifiers = [[NSMutableArray alloc] init];
 	for(LSApplicationProxy *proxy in installs){
 		[identifiers addObject:proxy.applicationIdentifier];
 	}
 
 	[[NSNotificationCenter defaultCenter] postNotificationName:@"installsStarted" object:nil userInfo:@{@"identifiers": identifiers}];
-
-	/*#pragma clang diagnostic push
-	#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-	
-	dispatch_async(dispatch_get_main_queue(), ^{
-		UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"" message:[NSString stringWithFormat:@"%@", installs] preferredStyle:UIAlertControllerStyleAlert];
-		UIAlertAction* dismissAction = [UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleCancel handler:^(UIAlertAction * action) {}];
-		[alert addAction:dismissAction];
-		[[[UIApplication sharedApplication] keyWindow].rootViewController presentViewController:alert animated:YES completion:nil];
-	});
-	
-	#pragma clang diagnostic pop*/
 }
 %end
 
