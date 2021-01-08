@@ -247,6 +247,10 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 		dispatch_async(__BBServerQueue, ^{
 			[sharedServer publishBulletin:bulletin destinations:2];
+		});
+	}
+}
+
 %new
 -(void)installsFinished:(NSNotification*)notification{
 	NSArray<NSString*> *identifiers = notification.userInfo[@"identifiers"];
