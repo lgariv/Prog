@@ -191,6 +191,9 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 @interface SBLockScreenManager : NSObject
 -(void)lockScreenViewControllerRequestsUnlock;
+-(BOOL)isUILocked;
+
++(instancetype)sharedInstanceIfExists;
 @end
 
 %hook FBSApplicationPlaceholder
@@ -248,7 +251,7 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 -(void)installsFinished:(NSNotification*)notification{
 	NSArray<NSString*> *identifiers = notification.userInfo[@"identifiers"];
 
-	if([identifiers containsObject:self.bundleIdentifier] && [self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]){
+	if([identifiers containsObject:self.bundleIdentifier] && ![[%c(SBLockScreenManager) sharedInstanceIfExists] isUILocked]){
 		BBBulletin *bulletin = [[BBBulletin alloc] init];
 		[bulletin setHeader:self.displayName];
 		[bulletin setTitle:@"Download Completed"];
