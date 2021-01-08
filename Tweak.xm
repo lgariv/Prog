@@ -12,7 +12,14 @@
 -(void)addVariant:(BBSectionIconVariant *)arg1 ;
 @end
 
+@interface BBAction : NSObject
++(id)actionWithLaunchURL:(id)arg1 ;
+-(void)setCanBypassPinLock:(BOOL)arg1 ;
+-(void)setShouldDismissBulletin:(BOOL)arg1 ;
+@end
+
 @interface BBBulletin : NSObject
+@property (nonatomic,copy) BBAction * defaultAction; 
 @property (nonatomic,readonly) NSString * sectionDisplayName;
 @property (nonatomic,copy) NSString * header;
 @property (nonatomic,copy) NSString * section;
@@ -37,12 +44,8 @@
 -(BOOL)prioritizeAtTopOfLockScreen ;
 @end
 
-@interface BBBulletinRequest : BBBulletin
--(void)generateNewBulletinID;
-@end
-
 @interface BBServer : NSObject
--(void)publishBulletinRequest:(BBBulletinRequest*)arg1 destinations:(unsigned long long)arg2;
+-(void)publishBulletin:(BBBulletin*)arg1 destinations:(unsigned long long)arg2;
 @end
 
 static BBServer *sharedServer;
@@ -178,11 +181,16 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 @interface FBSBundleInfo : NSObject
 @property (nonatomic,copy,readonly) NSString * displayName;
+@property (nonatomic,readonly) NSURL * bundleURL;
 @end
 
 @interface FBSApplicationPlaceholder : FBSBundleInfo
 @property NSString *bundleIdentifier;
 @property(nonatomic, readonly, strong) NSObject<FBSApplicationPlaceholderProgress> *progress;
+@end
+
+@interface SBLockScreenManager : NSObject
+-(void)lockScreenViewControllerRequestsUnlock;
 @end
 
 %hook FBSApplicationPlaceholder
@@ -203,7 +211,7 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 		progressDictionary[self.bundleIdentifier] = MSHookIvar<NSProgress*>(self.progress, "_progress");
 
-		BBBulletinRequest *bulletin = [[BBBulletinRequest alloc] init];
+		BBBulletin *bulletin = [[BBBulletin alloc] init];
 		[bulletin setHeader:self.displayName];
 		[bulletin setTitle:@"Downloading"];
 		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar"];
@@ -218,9 +226,23 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		[bulletin setThreadID:self.bundleIdentifier];
 		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14/%@", self.bundleIdentifier]];
 		[bulletin setDate:[NSDate date]];
-		
+
+		NSString *appInfoUrl = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@", self.bundleIdentifier];
+
+		NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:appInfoUrl]];
+
+		NSError *e = nil;
+		NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error: &e];
+
+		NSString *trackViewUrl = [[[jsonDict objectForKey:@"results"] objectAtIndex:0] objectForKey:@"trackViewUrl"];
+
+		BBAction *defaultAction = [BBAction actionWithLaunchURL:[NSURL URLWithString:trackViewUrl]];
+		[defaultAction setCanBypassPinLock:YES];
+		[defaultAction setShouldDismissBulletin:NO];
+		[bulletin setDefaultAction:defaultAction];
+
 		dispatch_async(__BBServerQueue, ^{
-			[sharedServer publishBulletinRequest:bulletin destinations:2];
+			[sharedServer publishBulletin:bulletin destinations:2];
 		});
 	}
 }
@@ -353,7 +375,7 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		UITextView *label = content.secondaryTextView;
 		label.hidden = true;
 		
-		self.progressView.translatesAutoresizingMaskIntoConstraints = false;
+		self.progressView.translatesAutoresizingMaskIntoConstraints = true;
 		
 		self.progressView.progressTintColor = [UIColor systemBlueColor];
 		self.progressView.trackTintColor = [UIColor lightGrayColor];
