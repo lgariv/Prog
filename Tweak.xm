@@ -97,7 +97,6 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 %property (nonatomic, strong) UIView *progressBar;
 %property (nonatomic, strong) UIView *progressBarBackground;
 %property (nonatomic, strong) NSString *bundleId;
-
 -(id)initWithFrame:(CGRect)arg1 {
 	if ((self = %orig)) {
 		self.progressBar = [[UIView alloc] init];
@@ -135,19 +134,12 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 			break;
 		}
 	}
-
 	[NSLayoutConstraint constraintWithItem:self.progressBar attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:self.progressBarBackground attribute:NSLayoutAttributeWidth multiplier:CGFloat(arg1) constant:0].active = true;
 }
-
--(void)_drawOutgoingCircleWithCenter:(CGPoint)arg1 {}
-
--(void)_drawIncomingCircleWithCenter:(CGPoint)arg1 {}
 
 -(void)_drawPauseUIWithCenter:(CGPoint)arg1 {
 	%orig(CGPointMake(arg1.x, arg1.y - 10));
 }
-
--(void)_drawPieWithCenter:(CGPoint)arg1 {}
 
 %new
 -(void)setupSubviews {
@@ -166,11 +158,7 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 }
 %end
 
-
-
-/*	<================================================================================================================================>	*/
-
-
+#pragma mark Handling App Installation Queues, Postint Push Notfiications
 
 @interface LSApplicationProxy : NSObject
 @property(nonatomic, readonly, strong) NSString *applicationIdentifier;
@@ -182,7 +170,11 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 @interface FBSApplicationPlaceholderProgress : NSObject <FBSApplicationPlaceholderProgress>
 @end
 
-@interface FBSApplicationPlaceholder : NSObject
+@interface FBSBundleInfo : NSObject
+@property (nonatomic,copy,readonly) NSString * displayName;
+@end
+
+@interface FBSApplicationPlaceholder : FBSBundleInfo
 @property NSString *bundleIdentifier;
 @property(nonatomic, readonly, strong) NSObject<FBSApplicationPlaceholderProgress> *progress;
 @end
@@ -206,7 +198,7 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		progressDictionary[self.bundleIdentifier] = MSHookIvar<NSProgress*>(self.progress, "_progress");
 
 		BBBulletinRequest *bulletin = [[BBBulletinRequest alloc] init];
-		[bulletin setHeader:[[%c(SBApplicationController) sharedInstance] applicationWithBundleIdentifier:self.bundleIdentifier].displayName];
+		[bulletin setHeader:self.displayName];
 		[bulletin setTitle:@"Downloading"];
 		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar"];
 		
@@ -241,11 +233,7 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 }
 %end
 
-
-
-/*	<================================================================================================================================>	*/
-
-
+#pragma mark Handling Bulletin App Icon
 
 @interface UIImage()
 +(instancetype)_applicationIconImageForBundleIdentifier:(NSString*)bundleId format:(int)format;
@@ -267,11 +255,7 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 }
 %end
 
-
-
-/*	<================================================================================================================================>	*/
-
-
+#pragma mark Handling Bulletin App Icon
 
 @interface PLPlatterView : UIView
 @end
@@ -298,9 +282,7 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 @interface NCNotificationViewController : UIViewController
 @property NCNotificationRequest *notificationRequest;
-
 @property UIProgressView *progressView;
-
 -(void)resetContent;
 @end
 
@@ -312,7 +294,6 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 %hook NCNotificationShortLookViewController
 %property(nonatomic, strong) UIProgressView *progressView;
-
 -(void)viewWillAppear:(BOOL)animated{
 	%orig;
 
@@ -350,7 +331,6 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 %hook NCNotificationLongLookViewController
 %property(nonatomic, strong) UIProgressView *progressView;
-
 -(void)viewWillAppear:(BOOL)animated{
 	%orig;
 
