@@ -58,6 +58,16 @@ extern dispatch_queue_t __BBServerQueue;
 
 #define PROGRESSBAR_INSET 7
 
+@interface SBApplication : NSObject
+@property NSString *displayName;
+@end
+
+@interface SBApplicationController : NSObject
+-(SBApplication*)applicationWithBundleIdentifier:(NSString*)identifier;
+
++(instancetype)sharedInstance;
+@end
+
 @interface SBIconProgressView : UIView
 @property (nonatomic, strong) UILabel *progressLabel;
 @property (nonatomic, strong) UIView *progressBar;
@@ -88,26 +98,20 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 %property (nonatomic, strong) UIView *progressBarBackground;
 %property (nonatomic, strong) NSString *bundleId;
 
--(void)setFrame:(CGRect)arg1 {
-	%orig;
-	if (arg1.size.width != 0) {
-		[self setupSubviews];
-	}
-}
-
 -(id)initWithFrame:(CGRect)arg1 {
-    if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
-
 	if ((self = %orig)) {
 		self.progressBar = [[UIView alloc] init];
+		self.progressBar.translatesAutoresizingMaskIntoConstraints = false;
 		self.progressBar.backgroundColor = [UIColor colorWithRed:67.f/255.f green:130.f/255.f blue:232.f/255.f alpha:1.0f];
 		self.progressBar.layer.cornerRadius = 2.5;
 
 		self.progressBarBackground = [[UIView alloc] init];
+		self.progressBarBackground.translatesAutoresizingMaskIntoConstraints = false;
 		self.progressBarBackground.backgroundColor = UIColor.darkGrayColor;
 		self.progressBarBackground.layer.cornerRadius = 2.5;
 
 		self.progressLabel = [[UILabel alloc] init];
+		self.progressLabel.translatesAutoresizingMaskIntoConstraints = false;
 		self.progressLabel.font = [UIFont boldSystemFontOfSize:10];
 		self.progressLabel.textAlignment = NSTextAlignmentCenter;
 		self.progressLabel.text = @"0%%";
@@ -115,36 +119,120 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		[self addSubview: self.progressBarBackground];
 		[self addSubview: self.progressBar];
 		[self addSubview: self.progressLabel];
+
+		[self setupSubviews];
 	}
 	return self;
 }
 
--(void)didMoveToSuperview{
+-(void)setDisplayedFraction:(double)arg1 {
 	%orig;
+	self.progressLabel.text = [NSString stringWithFormat:@"%i%%", (int)(arg1 * 100)];
+	self.progressLabel.textColor = [UIColor whiteColor];
+	for(NSLayoutConstraint *width in self.constraints){
+		if(width.firstAnchor == self.progressBar.widthAnchor || width.secondAnchor == self.progressBar.widthAnchor){
+			width.active = false;
+			break;
+		}
+	}
+
+	[NSLayoutConstraint constraintWithItem:self.progressBar attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:self.progressBarBackground attribute:NSLayoutAttributeWidth multiplier:CGFloat(arg1) constant:0].active = true;
+}
+
+-(void)_drawOutgoingCircleWithCenter:(CGPoint)arg1 {}
+
+-(void)_drawIncomingCircleWithCenter:(CGPoint)arg1 {}
+
+-(void)_drawPauseUIWithCenter:(CGPoint)arg1 {
+	%orig(CGPointMake(arg1.x, arg1.y - 10));
+}
+
+-(void)_drawPieWithCenter:(CGPoint)arg1 {}
+
+%new
+-(void)setupSubviews {
+	[self.progressBarBackground.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:PROGRESSBAR_INSET].active = true;
+	[self.progressBarBackground.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-PROGRESSBAR_INSET].active = true;
+	[self.progressBarBackground.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-PROGRESSBAR_INSET].active = true;
+	[self.progressBarBackground.heightAnchor constraintEqualToConstant:5].active = true;
+
+	[self.progressBar.leadingAnchor constraintEqualToAnchor:self.progressBarBackground.leadingAnchor].active = true;
+	[self.progressBar.widthAnchor constraintEqualToConstant:0].active = true;
+	[self.progressBar.topAnchor constraintEqualToAnchor:self.progressBarBackground.topAnchor].active = true;
+	[self.progressBar.bottomAnchor constraintEqualToAnchor:self.progressBarBackground.bottomAnchor].active = true;
+
+	[self.progressLabel.centerXAnchor constraintEqualToAnchor:self.centerXAnchor].active = true;
+	[self.progressLabel.bottomAnchor constraintEqualToAnchor:self.progressBarBackground.topAnchor constant:-2].active = true;
+}
+%end
+
+
+
+/*	<================================================================================================================================>	*/
+
+
+
+@interface LSApplicationProxy : NSObject
+@property(nonatomic, readonly, strong) NSString *applicationIdentifier;
+@end
+
+@protocol FBSApplicationPlaceholderProgress <NSObject>
+@end
+
+@interface FBSApplicationPlaceholderProgress : NSObject <FBSApplicationPlaceholderProgress>
+@end
+
+@interface FBSApplicationPlaceholder : NSObject
+@property NSString *bundleIdentifier;
+@property(nonatomic, readonly, strong) NSObject<FBSApplicationPlaceholderProgress> *progress;
+@end
+
+%hook FBSApplicationPlaceholder
+-(instancetype)_initWithApplicationProxy:(id)proxy{
+	FBSApplicationPlaceholder *instance = %orig;
 	
-	SBIconImageView *viewview = (SBIconImageView*)self.superview;
-	if (viewview != nil) {
-		SBIcon *icon = [viewview icon];
-		self.bundleId = [icon isKindOfClass:NSClassFromString(@"SBLeafIcon")] ? MSHookIvar<NSString*>(icon, "_applicationBundleID") : icon.uniqueIdentifier;
-        progressDictionary[self.bundleId] = [NSProgress progressWithTotalUnitCount:1000];
+	[[NSNotificationCenter defaultCenter] addObserver:instance selector:@selector(installsStarted:) name:@"installsStarted" object:nil];
+
+	return instance;
+}
+
+%new
+-(void)installsStarted:(NSNotification*)notification{
+	NSArray<NSString*> *identifiers = notification.userInfo[@"identifiers"];
+
+	/*NSString *desc = [NSString stringWithFormat:@"%@", self.progress];
+
+	#pragma clang diagnostic push
+	#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+	
+	dispatch_async(dispatch_get_main_queue(), ^{
+		UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"" message:[NSString stringWithFormat:@"%@", desc] preferredStyle:UIAlertControllerStyleAlert];
+		UIAlertAction* dismissAction = [UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleCancel handler:^(UIAlertAction * action) {}];
+		[alert addAction:dismissAction];
+		[[[UIApplication sharedApplication] keyWindow].rootViewController presentViewController:alert animated:YES completion:nil];
+	});
+	
+	#pragma clang diagnostic pop*/
+
+	if([identifiers containsObject:self.bundleIdentifier] && [self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]){
+		if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
+
+		progressDictionary[self.bundleIdentifier] = MSHookIvar<NSProgress*>(self.progress, "_progress");
 
 		BBBulletinRequest *bulletin = [[BBBulletinRequest alloc] init];
-		[bulletin setHeader:icon.displayName];
+		[bulletin setHeader:[[%c(SBApplicationController) sharedInstance] applicationWithBundleIdentifier:self.bundleIdentifier].displayName];
 		[bulletin setTitle:@"Downloading"];
 		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar"];
 		
 		NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
 		
-		//Temporary Fix because AppStore Notifications don't work on my device
-		//[bulletin setSection:@"com.apple.AppStore"];
-		//[bulletin setSectionID:@"com.apple.AppStore"];
 		[bulletin setSection:@"com.apple.Preferences"];
 		[bulletin setSectionID:@"com.apple.Preferences"];
 		
 		[bulletin setBulletinID:bulletinUUID];
 		[bulletin setRecordID:bulletinUUID];
-		[bulletin setThreadID:self.bundleId];
-		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14/%@", self.bundleId]];
+		[bulletin setThreadID:self.bundleIdentifier];
+		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14/%@", self.bundleIdentifier]];
 		[bulletin setDate:[NSDate date]];
 		
 		dispatch_async(__BBServerQueue, ^{
@@ -152,48 +240,66 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		});
 	}
 }
+%end
 
--(void)setDisplayedFraction:(double)arg1 {
+%hook FBSApplicationLibrary
+-(void)applicationInstallsDidStart:(id)installs{
 	%orig;
-	self.progressLabel.text = [NSString stringWithFormat:@"%i%%", (int)(arg1 * 100)];
-	self.progressLabel.textColor = [UIColor whiteColor];
-	[self.progressLabel sizeToFit];
 
-	NSDictionary* userInfo = @{@"fraction": [NSNumber numberWithDouble: arg1], @"bundleId": self.bundleId};
-	[[NSNotificationCenter defaultCenter] postNotificationName:@"updateProgress" object:nil userInfo:userInfo];
+	//[[NSNotificationCenter defaultCenter] postNotificationName:@"installsStarted" object:nil userInfo:@{}];
 
-    [progressDictionary[self.bundleId] setCompletedUnitCount:arg1 * 1000];
-}
+	NSMutableArray<NSString*> *identifiers = [[NSMutableArray alloc] init];
+	for(LSApplicationProxy *proxy in installs){
+		[identifiers addObject:proxy.applicationIdentifier];
+	}
 
--(void)_drawOutgoingCircleWithCenter:(CGPoint)arg1 {
+	[[NSNotificationCenter defaultCenter] postNotificationName:@"installsStarted" object:nil userInfo:@{@"identifiers": identifiers}];
 
-}
-
--(void)_drawIncomingCircleWithCenter:(CGPoint)arg1 {
-
-}
-
--(void)_drawPauseUIWithCenter:(CGPoint)arg1 {
-	%orig(CGPointMake(arg1.x, arg1.y - 10));
-}
-
--(void)_drawPieWithCenter:(CGPoint)arg1 {
-	self.progressLabel.center = CGPointMake(arg1.x, arg1.y + 7);
-	self.progressBar.frame = CGRectMake(PROGRESSBAR_INSET, self.frame.size.height - 12, (self.frame.size.width - PROGRESSBAR_INSET * 2) * self.displayedFraction, 5);
-	self.progressBarBackground.frame = CGRectMake(PROGRESSBAR_INSET, self.frame.size.height - 12, self.frame.size.width - PROGRESSBAR_INSET * 2, 5);
-}
-
-%new
--(void)setupSubviews {
-	self.progressBarBackground.frame = CGRectMake(PROGRESSBAR_INSET, self.frame.size.height - 12, self.frame.size.width - PROGRESSBAR_INSET * 2, 5);
-	self.progressBar.frame = CGRectMake(PROGRESSBAR_INSET, self.frame.size.height - 12, (self.frame.size.width - PROGRESSBAR_INSET * 2) * self.displayedFraction, 5);
-	self.progressLabel.center = CGPointMake(self.frame.size.width / 2, self.frame.size.height / 2 + 7);
+	/*#pragma clang diagnostic push
+	#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+	
+	dispatch_async(dispatch_get_main_queue(), ^{
+		UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"" message:[NSString stringWithFormat:@"%@", installs] preferredStyle:UIAlertControllerStyleAlert];
+		UIAlertAction* dismissAction = [UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleCancel handler:^(UIAlertAction * action) {}];
+		[alert addAction:dismissAction];
+		[[[UIApplication sharedApplication] keyWindow].rootViewController presentViewController:alert animated:YES completion:nil];
+	});
+	
+	#pragma clang diagnostic pop*/
 }
 %end
+
+
+
+/*	<================================================================================================================================>	*/
+
+
 
 @interface UIImage()
 +(instancetype)_applicationIconImageForBundleIdentifier:(NSString*)bundleId format:(int)format;
 @end
+
+%hook BBBulletin
+-(BBSectionIcon *)sectionIcon{
+	if ([self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+		UIImage *img = [UIImage _applicationIconImageForBundleIdentifier:[self.publisherBulletinID substringFromIndex:[self.publisherBulletinID rangeOfString:@"/"].location + 1] format:1];
+
+		BBSectionIconVariant *variant = [[BBSectionIconVariant alloc] init];
+		[variant setImageData:UIImagePNGRepresentation(img)];
+
+		BBSectionIcon *icon = [[BBSectionIcon alloc] init];
+		[icon addVariant:variant];
+
+		return icon;
+	} else return %orig;
+}
+%end
+
+
+
+/*	<================================================================================================================================>	*/
+
+
 
 @interface PLPlatterView : UIView
 @end
@@ -232,22 +338,6 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 @interface NCNotificationLongLookViewController : NCNotificationViewController
 @end
 
-%hook BBBulletin
--(BBSectionIcon *)sectionIcon{
-	if ([self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
-		UIImage *img = [UIImage _applicationIconImageForBundleIdentifier:[self.publisherBulletinID substringFromIndex:[self.publisherBulletinID rangeOfString:@"/"].location + 1] format:1];
-
-		BBSectionIconVariant *variant = [[BBSectionIconVariant alloc] init];
-		[variant setImageData:UIImagePNGRepresentation(img)];
-
-		BBSectionIcon *icon = [[BBSectionIcon alloc] init];
-		[icon addVariant:variant];
-
-		return icon;
-	} else return %orig;
-}
-%end
-
 %hook NCNotificationShortLookViewController
 %property(nonatomic, strong) UIProgressView *progressView;
 
@@ -257,9 +347,10 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
 		if(!self.progressView) {
 			self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-            self.progressView.observedProgress = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
-    	}
+		}
 		
+		self.progressView.observedProgress = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
+
 		NCNotificationContentView *content = ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView;
 		UILabel *label = content.secondaryLabel;
 		label.hidden = true;
@@ -280,8 +371,8 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 %new
 -(void)resetContent{
-    [self.progressView removeFromSuperview];
-    ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView.secondaryLabel.hidden = false;
+	[self.progressView removeFromSuperview];
+	((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView.secondaryLabel.hidden = false;
 }
 %end
 
@@ -291,14 +382,15 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 -(void)viewWillAppear:(BOOL)animated{
 	%orig;
 
-    [self.progressView removeFromSuperview];
+	[self.progressView removeFromSuperview];
 
 	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
 		if(!self.progressView) {
 			self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-            self.progressView.observedProgress = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
-    	}
+		}
 		
+		self.progressView.observedProgress = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
+
 		NCNotificationContentView *content = MSHookIvar<NCNotificationContentView*>(MSHookIvar<NCNotificationLongLookView*>(self, "_lookView"), "_notificationContentView");
 		UITextView *label = content.secondaryTextView;
 		label.hidden = true;
@@ -318,8 +410,8 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 %new
 -(void)resetContent{
-    [self.progressView removeFromSuperview];
-    MSHookIvar<NCNotificationContentView*>(MSHookIvar<NCNotificationLongLookView*>(self, "_lookView"), "_notificationContentView").secondaryTextView.hidden = false;
+	[self.progressView removeFromSuperview];
+	MSHookIvar<NCNotificationContentView*>(MSHookIvar<NCNotificationLongLookView*>(self, "_lookView"), "_notificationContentView").secondaryTextView.hidden = false;
 }
 %end
 
@@ -329,14 +421,22 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 %hook NCNotificationListCell
 -(void)didMoveToSuperview{
-    %orig;
+	%orig;
 
-    if(![self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) [self.contentViewController resetContent];
+	if([self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+		self.contentViewController.progressView.observedProgress = progressDictionary[[self.contentViewController.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.contentViewController.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
+	} else{
+		[self.contentViewController resetContent];
+	}
 }
 
 -(void)didMoveToWindow{
-    %orig;
+	%orig;
 
-    if(![self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) [self.contentViewController resetContent];
+	if([self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+		self.contentViewController.progressView.observedProgress = progressDictionary[[self.contentViewController.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.contentViewController.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
+	} else{
+		[self.contentViewController resetContent];
+	}
 }
 %end
