@@ -12,7 +12,14 @@
 -(void)addVariant:(BBSectionIconVariant *)arg1 ;
 @end
 
+@interface BBAction : NSObject
++(id)actionWithLaunchURL:(id)arg1 ;
+-(void)setCanBypassPinLock:(BOOL)arg1 ;
+-(void)setShouldDismissBulletin:(BOOL)arg1 ;
+@end
+
 @interface BBBulletin : NSObject
+@property (nonatomic,copy) BBAction * defaultAction; 
 @property (nonatomic,readonly) NSString * sectionDisplayName;
 @property (nonatomic,copy) NSString * header;
 @property (nonatomic,copy) NSString * section;
@@ -43,6 +50,7 @@
 
 @interface BBServer : NSObject
 -(void)publishBulletinRequest:(BBBulletinRequest*)arg1 destinations:(unsigned long long)arg2;
+-(void)publishBulletin:(BBBulletin*)arg1 destinations:(unsigned long long)arg2;
 @end
 
 static BBServer *sharedServer;
@@ -137,6 +145,12 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 	[NSLayoutConstraint constraintWithItem:self.progressBar attribute:NSLayoutAttributeWidth relatedBy:NSLayoutRelationEqual toItem:self.progressBarBackground attribute:NSLayoutAttributeWidth multiplier:CGFloat(arg1) constant:0].active = true;
 }
 
+-(void)_drawOutgoingCircleWithCenter:(CGPoint)arg1 {}
+
+-(void)_drawIncomingCircleWithCenter:(CGPoint)arg1 {}
+
+-(void)_drawPieWithCenter:(CGPoint)arg1 {}
+
 -(void)_drawPauseUIWithCenter:(CGPoint)arg1 {
 	%orig(CGPointMake(arg1.x, arg1.y - 10));
 }
@@ -172,11 +186,16 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 
 @interface FBSBundleInfo : NSObject
 @property (nonatomic,copy,readonly) NSString * displayName;
+@property (nonatomic,readonly) NSURL * bundleURL;
 @end
 
 @interface FBSApplicationPlaceholder : FBSBundleInfo
 @property NSString *bundleIdentifier;
 @property(nonatomic, readonly, strong) NSObject<FBSApplicationPlaceholderProgress> *progress;
+@end
+
+@interface SBLockScreenManager : NSObject
+-(void)lockScreenViewControllerRequestsUnlock;
 @end
 
 %hook FBSApplicationPlaceholder
@@ -192,26 +211,12 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 -(void)installsStarted:(NSNotification*)notification{
 	NSArray<NSString*> *identifiers = notification.userInfo[@"identifiers"];
 
-	/*NSString *desc = [NSString stringWithFormat:@"%@", self.progress];
-
-	#pragma clang diagnostic push
-	#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-	
-	dispatch_async(dispatch_get_main_queue(), ^{
-		UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"" message:[NSString stringWithFormat:@"%@", desc] preferredStyle:UIAlertControllerStyleAlert];
-		UIAlertAction* dismissAction = [UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleCancel handler:^(UIAlertAction * action) {}];
-		[alert addAction:dismissAction];
-		[[[UIApplication sharedApplication] keyWindow].rootViewController presentViewController:alert animated:YES completion:nil];
-	});
-	
-	#pragma clang diagnostic pop*/
-
 	if([identifiers containsObject:self.bundleIdentifier] && [self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]){
 		if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
 
 		progressDictionary[self.bundleIdentifier] = MSHookIvar<NSProgress*>(self.progress, "_progress");
 
-		BBBulletinRequest *bulletin = [[BBBulletinRequest alloc] init];
+		BBBulletin *bulletin = [[BBBulletin alloc] init];
 		[bulletin setHeader:self.displayName];
 		[bulletin setTitle:@"Downloading"];
 		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar"];
@@ -226,9 +231,32 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		[bulletin setThreadID:self.bundleIdentifier];
 		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14/%@", self.bundleIdentifier]];
 		[bulletin setDate:[NSDate date]];
-		
+
+		// dispatch_async(dispatch_get_main_queue(), ^{
+			NSString *appInfoUrl = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@", self.bundleIdentifier];
+
+			NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:appInfoUrl]];
+
+			NSError *e = nil;
+			NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error: &e];
+
+			NSString *trackViewUrl = [[[jsonDict objectForKey:@"results"] objectAtIndex:0] objectForKey:@"trackViewUrl"];
+
+			BBAction *defaultAction = [BBAction actionWithLaunchURL:[NSURL URLWithString:trackViewUrl]];
+			[defaultAction setCanBypassPinLock:YES];
+			[defaultAction setShouldDismissBulletin:NO];
+			[bulletin setDefaultAction:defaultAction];
+		// });
+
+		// dispatch_async(dispatch_get_main_queue(), ^{
+		// 	NSURL *URL = [NSURL URLWithString:@"https://apps.apple.com/us/app/apple-music/id1108187390"];
+		// 	NSLog(@"[DownloadBar] self.bundleURL", self.bundleURL);
+		// 	[[UIApplication sharedApplication] openURL:self.bundleURL];
+		// 	[[objc_getClass("SBLockScreenManager") sharedInstance] lockScreenViewControllerRequestsUnlock];
+		// });
+
 		dispatch_async(__BBServerQueue, ^{
-			[sharedServer publishBulletinRequest:bulletin destinations:2];
+			[sharedServer publishBulletin:bulletin destinations:2];
 		});
 	}
 }
@@ -238,26 +266,12 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 -(void)applicationInstallsDidStart:(id)installs{
 	%orig;
 
-	//[[NSNotificationCenter defaultCenter] postNotificationName:@"installsStarted" object:nil userInfo:@{}];
-
 	NSMutableArray<NSString*> *identifiers = [[NSMutableArray alloc] init];
 	for(LSApplicationProxy *proxy in installs){
 		[identifiers addObject:proxy.applicationIdentifier];
 	}
 
 	[[NSNotificationCenter defaultCenter] postNotificationName:@"installsStarted" object:nil userInfo:@{@"identifiers": identifiers}];
-
-	/*#pragma clang diagnostic push
-	#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-	
-	dispatch_async(dispatch_get_main_queue(), ^{
-		UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"" message:[NSString stringWithFormat:@"%@", installs] preferredStyle:UIAlertControllerStyleAlert];
-		UIAlertAction* dismissAction = [UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleCancel handler:^(UIAlertAction * action) {}];
-		[alert addAction:dismissAction];
-		[[[UIApplication sharedApplication] keyWindow].rootViewController presentViewController:alert animated:YES completion:nil];
-	});
-	
-	#pragma clang diagnostic pop*/
 }
 %end
 
