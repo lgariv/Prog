@@ -375,7 +375,7 @@ static NSMutableDictionary<NSString*, NSProgress*> *progressDictionary;
 		UITextView *label = content.secondaryTextView;
 		label.hidden = true;
 		
-		self.progressView.translatesAutoresizingMaskIntoConstraints = true;
+		self.progressView.translatesAutoresizingMaskIntoConstraints = false;
 		
 		self.progressView.progressTintColor = [UIColor systemBlueColor];
 		self.progressView.trackTintColor = [UIColor lightGrayColor];
