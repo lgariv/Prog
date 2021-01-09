@@ -396,7 +396,7 @@ NSMutableDictionary *bulletinDictionary;
 }
 
 -(BOOL)allowsAutomaticRemovalFromLockScreen{
-	if ([self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+	if ([self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"] || [self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14-completed/"]) {
 		return false;
 	}
 
