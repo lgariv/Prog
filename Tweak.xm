@@ -341,7 +341,7 @@ NSMutableDictionary *bulletinDictionary;
 		[bulletin setDefaultAction:defaultAction];
 
 		dispatch_async(__BBServerQueue, ^{
-			[sharedServer publishBulletin:bulletin destinations:6];
+			[sharedServer publishBulletin:bulletin destinations:14];
 		});
 
 		[[NSNotificationCenter defaultCenter] removeObserver:self name:@"installsStarted" object:nil];
