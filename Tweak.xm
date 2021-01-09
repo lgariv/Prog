@@ -532,6 +532,8 @@ NSMutableDictionary *bulletinDictionary;
 	[content addSubview:self.progressContainerView];
 	self.progressContainerView.translatesAutoresizingMaskIntoConstraints = false;
 
+	if(!label) return;
+	
 	[self.progressContainerView.topAnchor constraintEqualToAnchor:label.topAnchor].active = true;
 	[self.progressContainerView.bottomAnchor constraintEqualToAnchor:label.centerYAnchor].active = true;
 	[self.progressContainerView.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
