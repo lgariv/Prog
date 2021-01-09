@@ -239,6 +239,7 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 		[bulletin setThreadID:self.bundleIdentifier];
 		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14/%@", self.bundleIdentifier]];
 		[bulletin setDate:[NSDate date]];
+		[bulletin setLockScreenPriority:1];
 
 		NSString *appInfoUrl = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@", self.bundleIdentifier];
 
@@ -262,7 +263,7 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 		// [bulletin setSupplementaryActionsByLayout:supplementaryActions];
 
 		dispatch_async(__BBServerQueue, ^{
-			[sharedServer publishBulletin:bulletin destinations:2];
+			[sharedServer publishBulletin:bulletin destinations:4];
 		});
 	}
 }
@@ -359,6 +360,10 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 
 		return icon;
 	} else return %orig;
+}
+
+-(BOOL)allowsAutomaticRemovalFromLockScreen{
+	return false;
 }
 %end
 
