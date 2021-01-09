@@ -202,7 +202,6 @@ NSMutableDictionary *bulletinDictionary;
 @interface SBLockScreenManager : NSObject
 -(void)lockScreenViewControllerRequestsUnlock;
 -(BOOL)isUILocked;
-
 +(instancetype)sharedInstanceIfExists;
 @end
 
@@ -214,7 +213,7 @@ NSMutableDictionary *bulletinDictionary;
 %hook FBSApplicationPlaceholder
 -(instancetype)_initWithApplicationProxy:(id)proxy{
 	FBSApplicationPlaceholder *instance = %orig;
-	
+
 	[[NSNotificationCenter defaultCenter] addObserver:instance selector:@selector(installsStarted:) name:@"installsStarted" object:nil];
 	[[NSNotificationCenter defaultCenter] addObserver:instance selector:@selector(installsFinished:) name:@"installsFinished" object:nil];
 
@@ -236,13 +235,13 @@ NSMutableDictionary *bulletinDictionary;
 		[bulletin setHeader:self.displayName];
 		[bulletin setTitle:@"Downloading"];
 		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar\ncom.miwix.downloadbar14-progress"];
-		
+
 		NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
 		bulletinDictionary[self.bundleIdentifier] = bulletinUUID;
 
 		[bulletin setSection:@"com.apple.Preferences"];
 		[bulletin setSectionID:@"com.apple.Preferences"];
-		
+
 		[bulletin setBulletinID:bulletinUUID];
 		[bulletin setRecordID:bulletinUUID];
 		[bulletin setThreadID:self.bundleIdentifier];
@@ -295,7 +294,7 @@ NSMutableDictionary *bulletinDictionary;
 		[bulletin setHeader:self.displayName];
 		[bulletin setTitle:[NSString stringWithFormat:@"%@ Installed", self.displayName]];
 		[bulletin setMessage:@"Tap to open"];
-		
+
 		NSString *bulletinUUID = bulletinDictionary[self.bundleIdentifier];
 
 		dispatch_async(__BBServerQueue, ^{
@@ -304,12 +303,13 @@ NSMutableDictionary *bulletinDictionary;
 
 		[bulletin setSection:@"com.apple.Preferences"];
 		[bulletin setSectionID:@"com.apple.Preferences"];
-		
+
 		[bulletin setBulletinID:bulletinUUID];
 		[bulletin setRecordID:bulletinUUID];
 		[bulletin setThreadID:self.bundleIdentifier];
 		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14-completed/%@", self.bundleIdentifier]];
 		[bulletin setDate:[NSDate date]];
+		[bulletin setLockScreenPriority:1];
 
 		BBAction *defaultAction = [BBAction actionWithLaunchBundleID:self.bundleIdentifier];
 		[defaultAction setCanBypassPinLock:YES];
@@ -317,7 +317,7 @@ NSMutableDictionary *bulletinDictionary;
 		[bulletin setDefaultAction:defaultAction];
 
 		dispatch_async(__BBServerQueue, ^{
-			[sharedServer publishBulletin:bulletin destinations:4];
+			[sharedServer publishBulletin:bulletin destinations:6];
 		});
 
 		[[NSNotificationCenter defaultCenter] removeObserver:self name:@"installsStarted" object:nil];
