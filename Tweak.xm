@@ -395,6 +395,7 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 @property(nonatomic, strong) UILabel *progressLabel;
 @property(nonatomic, strong) NSTimer *progressUpdateTimer;
 -(void)updateProgressLabel:(NSTimer*)timer;
+-(void)setupContent;
 -(void)resetContent;
 @end
 
@@ -414,57 +415,7 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 	%orig;
 
 	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
-		if(!self.progressView) {
-			self.progressContainerView = [[UIView alloc] init];
-			self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-			[self.progressContainerView addSubview:self.progressView];
-
-			self.progressLabel = [[UILabel alloc] init];
-		}
-		
-		self.progressView.observedProgress = MSHookIvar<NSProgress*>(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress");
-		if(self.progressView.observedProgress == nil) self.progressView.progress = 1;
-
-		NCNotificationContentView *content = ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView;
-		UILabel *label = content.secondaryLabel;
-		label.hidden = true;
-		
-		self.progressView.translatesAutoresizingMaskIntoConstraints = false;
-		
-		self.progressView.progressTintColor = [UIColor systemBlueColor];
-		self.progressView.trackTintColor = [UIColor lightGrayColor];
-		
-		[self.progressContainerView removeFromSuperview];
-		[content addSubview:self.progressContainerView];
-		self.progressContainerView.translatesAutoresizingMaskIntoConstraints = false;
-
-		[self.progressContainerView.topAnchor constraintEqualToAnchor:label.topAnchor].active = true;
-		[self.progressContainerView.bottomAnchor constraintEqualToAnchor:label.centerYAnchor].active = true;
-		[self.progressContainerView.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
-		[self.progressContainerView.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
-
-		[self.progressView.centerYAnchor constraintEqualToAnchor:self.progressContainerView.centerYAnchor].active = true;
-		[self.progressView.leadingAnchor constraintEqualToAnchor:self.progressContainerView.leadingAnchor].active = true;
-		[self.progressView.trailingAnchor constraintEqualToAnchor:self.progressContainerView.trailingAnchor].active = true;
-
-		[self.progressLabel removeFromSuperview];
-		self.progressLabel.translatesAutoresizingMaskIntoConstraints = false;
-		[content addSubview:self.progressLabel];
-		self.progressLabel.textColor = UIColor.grayColor;
-
-		[self.progressLabel.topAnchor constraintEqualToAnchor:label.centerYAnchor].active = true;
-		[self.progressLabel.bottomAnchor constraintEqualToAnchor:label.bottomAnchor].active = true;
-		[self.progressLabel.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
-		[self.progressLabel.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
-
-		[self updateProgressLabel:NULL];
-
-		if(self.progressUpdateTimer && self.progressView.progress < 1){
-			[self.progressUpdateTimer invalidate];
-			self.progressUpdateTimer = NULL;
-		}
-
-		self.progressUpdateTimer = [NSTimer scheduledTimerWithTimeInterval:0.5 target:self selector:@selector(updateProgressLabel:) userInfo:nil repeats:YES];
+		[self setupContent];
 	}
 }
 
@@ -503,6 +454,61 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 		[self.progressUpdateTimer invalidate];
 		self.progressUpdateTimer = NULL;
 	}
+}
+
+%new
+-(void)setupContent{
+	if(!self.progressView) {
+		self.progressContainerView = [[UIView alloc] init];
+		self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+		[self.progressContainerView addSubview:self.progressView];
+
+		self.progressLabel = [[UILabel alloc] init];
+	}
+	
+	self.progressView.observedProgress = MSHookIvar<NSProgress*>(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress");
+	if(self.progressView.observedProgress == nil) self.progressView.progress = 1;
+
+	NCNotificationContentView *content = ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView;
+	UILabel *label = content.secondaryLabel;
+	label.hidden = true;
+	
+	self.progressView.translatesAutoresizingMaskIntoConstraints = false;
+	
+	self.progressView.progressTintColor = [UIColor systemBlueColor];
+	self.progressView.trackTintColor = [UIColor lightGrayColor];
+	
+	[self.progressContainerView removeFromSuperview];
+	[content addSubview:self.progressContainerView];
+	self.progressContainerView.translatesAutoresizingMaskIntoConstraints = false;
+
+	[self.progressContainerView.topAnchor constraintEqualToAnchor:label.topAnchor].active = true;
+	[self.progressContainerView.bottomAnchor constraintEqualToAnchor:label.centerYAnchor].active = true;
+	[self.progressContainerView.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
+	[self.progressContainerView.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
+
+	[self.progressView.centerYAnchor constraintEqualToAnchor:self.progressContainerView.centerYAnchor].active = true;
+	[self.progressView.leadingAnchor constraintEqualToAnchor:self.progressContainerView.leadingAnchor].active = true;
+	[self.progressView.trailingAnchor constraintEqualToAnchor:self.progressContainerView.trailingAnchor].active = true;
+
+	[self.progressLabel removeFromSuperview];
+	self.progressLabel.translatesAutoresizingMaskIntoConstraints = false;
+	[content addSubview:self.progressLabel];
+	self.progressLabel.textColor = UIColor.grayColor;
+
+	[self.progressLabel.topAnchor constraintEqualToAnchor:label.centerYAnchor].active = true;
+	[self.progressLabel.bottomAnchor constraintEqualToAnchor:label.bottomAnchor].active = true;
+	[self.progressLabel.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
+	[self.progressLabel.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
+
+	[self updateProgressLabel:NULL];
+
+	if(self.progressUpdateTimer && self.progressView.progress < 1){
+		[self.progressUpdateTimer invalidate];
+		self.progressUpdateTimer = NULL;
+	}
+
+	self.progressUpdateTimer = [NSTimer scheduledTimerWithTimeInterval:0.5 target:self selector:@selector(updateProgressLabel:) userInfo:nil repeats:YES];
 }
 
 %new
@@ -523,57 +529,7 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 	%orig;
 
 	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
-		if(!self.progressView) {
-			self.progressContainerView = [[UIView alloc] init];
-			self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-			[self.progressContainerView addSubview:self.progressView];
-
-			self.progressLabel = [[UILabel alloc] init];
-		}
-		
-		self.progressView.observedProgress = MSHookIvar<NSProgress*>(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress");
-		if(self.progressView.observedProgress == nil) self.progressView.progress = 1;
-
-		NCNotificationContentView *content = MSHookIvar<NCNotificationContentView*>(MSHookIvar<NCNotificationLongLookView*>(self, "_lookView"), "_notificationContentView");
-		UITextView *label = content.secondaryTextView;
-		label.hidden = true;
-		
-		self.progressView.translatesAutoresizingMaskIntoConstraints = false;
-		
-		self.progressView.progressTintColor = [UIColor systemBlueColor];
-		self.progressView.trackTintColor = [UIColor lightGrayColor];
-		
-		[self.progressContainerView removeFromSuperview];
-		[content addSubview:self.progressContainerView];
-		self.progressContainerView.translatesAutoresizingMaskIntoConstraints = false;
-
-		[self.progressContainerView.topAnchor constraintEqualToAnchor:content.primaryLabel.bottomAnchor].active = true;
-		[self.progressContainerView.heightAnchor constraintEqualToAnchor:content.primaryLabel.heightAnchor].active = true;
-		[self.progressContainerView.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
-		[self.progressContainerView.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
-
-		[self.progressView.centerYAnchor constraintEqualToAnchor:self.progressContainerView.centerYAnchor].active = true;
-		[self.progressView.leadingAnchor constraintEqualToAnchor:self.progressContainerView.leadingAnchor].active = true;
-		[self.progressView.trailingAnchor constraintEqualToAnchor:self.progressContainerView.trailingAnchor].active = true;
-
-		[self.progressLabel removeFromSuperview];
-		self.progressLabel.translatesAutoresizingMaskIntoConstraints = false;
-		[content addSubview:self.progressLabel];
-		self.progressLabel.textColor = UIColor.grayColor;
-
-		[self.progressLabel.topAnchor constraintEqualToAnchor:self.progressContainerView.bottomAnchor].active = true;
-		[self.progressLabel.heightAnchor constraintEqualToAnchor:content.primaryLabel.heightAnchor].active = true;
-		[self.progressLabel.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
-		[self.progressLabel.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
-
-		[self updateProgressLabel:NULL];
-
-		if(self.progressUpdateTimer && self.progressView.progress < 1){
-			[self.progressUpdateTimer invalidate];
-			self.progressUpdateTimer = NULL;
-		}
-
-		self.progressUpdateTimer = [NSTimer scheduledTimerWithTimeInterval:0.5 target:self selector:@selector(updateProgressLabel:) userInfo:nil repeats:YES];
+		[self setupContent];
 	}
 }
 
@@ -615,6 +571,61 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 }
 
 %new
+-(void)setupContent{
+	if(!self.progressView) {
+		self.progressContainerView = [[UIView alloc] init];
+		self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+		[self.progressContainerView addSubview:self.progressView];
+
+		self.progressLabel = [[UILabel alloc] init];
+	}
+	
+	self.progressView.observedProgress = MSHookIvar<NSProgress*>(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress");
+	if(self.progressView.observedProgress == nil) self.progressView.progress = 1;
+
+	NCNotificationContentView *content = MSHookIvar<NCNotificationContentView*>(MSHookIvar<NCNotificationLongLookView*>(self, "_lookView"), "_notificationContentView");
+	UITextView *label = content.secondaryTextView;
+	label.hidden = true;
+	
+	self.progressView.translatesAutoresizingMaskIntoConstraints = false;
+	
+	self.progressView.progressTintColor = [UIColor systemBlueColor];
+	self.progressView.trackTintColor = [UIColor lightGrayColor];
+	
+	[self.progressContainerView removeFromSuperview];
+	[content addSubview:self.progressContainerView];
+	self.progressContainerView.translatesAutoresizingMaskIntoConstraints = false;
+
+	[self.progressContainerView.topAnchor constraintEqualToAnchor:content.primaryLabel.bottomAnchor].active = true;
+	[self.progressContainerView.heightAnchor constraintEqualToAnchor:content.primaryLabel.heightAnchor].active = true;
+	[self.progressContainerView.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
+	[self.progressContainerView.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
+
+	[self.progressView.centerYAnchor constraintEqualToAnchor:self.progressContainerView.centerYAnchor].active = true;
+	[self.progressView.leadingAnchor constraintEqualToAnchor:self.progressContainerView.leadingAnchor].active = true;
+	[self.progressView.trailingAnchor constraintEqualToAnchor:self.progressContainerView.trailingAnchor].active = true;
+
+	[self.progressLabel removeFromSuperview];
+	self.progressLabel.translatesAutoresizingMaskIntoConstraints = false;
+	[content addSubview:self.progressLabel];
+	self.progressLabel.textColor = UIColor.grayColor;
+
+	[self.progressLabel.topAnchor constraintEqualToAnchor:self.progressContainerView.bottomAnchor].active = true;
+	[self.progressLabel.heightAnchor constraintEqualToAnchor:content.primaryLabel.heightAnchor].active = true;
+	[self.progressLabel.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
+	[self.progressLabel.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
+
+	[self updateProgressLabel:NULL];
+
+	if(self.progressUpdateTimer && self.progressView.progress < 1){
+		[self.progressUpdateTimer invalidate];
+		self.progressUpdateTimer = NULL;
+	}
+
+	self.progressUpdateTimer = [NSTimer scheduledTimerWithTimeInterval:0.5 target:self selector:@selector(updateProgressLabel:) userInfo:nil repeats:YES];
+}
+
+%new
 -(void)resetContent{
 	[self.progressContainerView removeFromSuperview];
 	[self.progressLabel removeFromSuperview];
@@ -631,7 +642,7 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 	%orig;
 
 	if([self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
-		self.contentViewController.progressView.observedProgress = MSHookIvar<NSProgress*>(progressDictionary[[self.contentViewController.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.contentViewController.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress");
+		[self.contentViewController setupContent];
 	} else{
 		[self.contentViewController resetContent];
 	}
@@ -641,7 +652,7 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 	%orig;
 
 	if([self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
-		self.contentViewController.progressView.observedProgress = MSHookIvar<NSProgress*>(progressDictionary[[self.contentViewController.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.contentViewController.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress");
+		[self.contentViewController setupContent];
 	} else{
 		[self.contentViewController resetContent];
 	}
@@ -651,7 +662,7 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 	%orig;
 
 	if([self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
-		self.contentViewController.progressView.observedProgress = MSHookIvar<NSProgress*>(progressDictionary[[self.contentViewController.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.contentViewController.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress");
+		[self.contentViewController setupContent];
 	} else{
 		[self.contentViewController resetContent];
 	}
