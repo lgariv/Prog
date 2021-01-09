@@ -363,7 +363,11 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 }
 
 -(BOOL)allowsAutomaticRemovalFromLockScreen{
-	return false;
+	if ([self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"] || [self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14-completed/"]) {
+		return false;
+	}
+
+	return %orig;
 }
 %end
 
