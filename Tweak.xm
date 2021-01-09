@@ -184,19 +184,26 @@ NSMutableDictionary *bulletinDictionary;
 @protocol FBSApplicationPlaceholderProgress <NSObject>
 @end
 
-@interface FBSApplicationPlaceholderProgress : NSObject <FBSApplicationPlaceholderProgress>
-@property(nonatomic, strong) NSDate *installStartedDate;
-@property(nonatomic, strong) NSDate *installEndedDate;
-@end
-
 @interface FBSBundleInfo : NSObject
+@property NSString *bundleIdentifier;
 @property (nonatomic,copy,readonly) NSString * displayName;
 @property (nonatomic,readonly) NSURL * bundleURL;
 @end
 
 @interface FBSApplicationPlaceholder : FBSBundleInfo
-@property NSString *bundleIdentifier;
+@property(getter=isPrioritizable) BOOL prioritizable;
+@property(getter=isPausable) BOOL pausable;
+@property(getter=isResumable) BOOL resumable;
+@property(getter=isCancellable) BOOL cancellable;
 @property(nonatomic, readonly, strong) NSObject<FBSApplicationPlaceholderProgress> *progress;
+@end
+
+@interface FBSApplicationPlaceholderProgress : NSObject <FBSApplicationPlaceholderProgress>
+@property FBSApplicationPlaceholder *placeholder;
+@property(nonatomic, strong) NSDate *installStartedDate;
+@property(nonatomic, strong) NSDate *installEndedDate;
+@property(nonatomic, strong) NSDate *pauseDate;
+@property(nonatomic, strong) NSNumber *pausedDuration;
 @end
 
 @interface SBLockScreenManager : NSObject
@@ -208,6 +215,8 @@ NSMutableDictionary *bulletinDictionary;
 %hook FBSApplicationPlaceholderProgress
 %property(nonatomic, strong) NSDate *installStartedDate;
 %property(nonatomic, strong) NSDate *installEndedDate;
+%property(nonatomic, strong) NSDate *pauseDate;
+%property(nonatomic, strong) NSNumber *pausedDuration;
 %end
 
 %hook FBSApplicationPlaceholder
@@ -218,6 +227,21 @@ NSMutableDictionary *bulletinDictionary;
 	[[NSNotificationCenter defaultCenter] addObserver:instance selector:@selector(installsFinished:) name:@"installsFinished" object:nil];
 
 	return instance;
+}
+
+-(void)_pauseWithResult:(id)result{
+	if([self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]) ((FBSApplicationPlaceholderProgress*)self.progress).pauseDate = NSDate.date;
+
+	return %orig;
+}
+
+-(void)_resumeWithResult:(id)result{
+	if([self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)] && ((FBSApplicationPlaceholderProgress*)self.progress).pauseDate) {
+		((FBSApplicationPlaceholderProgress*)self.progress).pausedDuration = @(((FBSApplicationPlaceholderProgress*)self.progress).pausedDuration.doubleValue + -((FBSApplicationPlaceholderProgress*)self.progress).pauseDate.timeIntervalSinceNow);
+		((FBSApplicationPlaceholderProgress*)self.progress).pauseDate = NULL;
+	}
+
+	return %orig;
 }
 
 %new
@@ -372,7 +396,7 @@ NSMutableDictionary *bulletinDictionary;
 }
 
 -(BOOL)allowsAutomaticRemovalFromLockScreen{
-	if ([self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"] || [self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14-completed/"]) {
+	if ([self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
 		return false;
 	}
 
@@ -448,7 +472,15 @@ NSMutableDictionary *bulletinDictionary;
 
 %new
 -(void)updateProgressLabel:(NSTimer*)timer{
-	long total = (long)floor(-[progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].installStartedDate timeIntervalSinceDate:[NSDate.date earlierDate:progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].installEndedDate]]);
+	if(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pauseDate) {
+		progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pausedDuration = @(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pausedDuration.doubleValue + -progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pauseDate.timeIntervalSinceNow);
+		progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pauseDate = NSDate.date;
+	}
+
+	double pausedDuration = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pausedDuration.doubleValue;
+	BOOL paused = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].placeholder.resumable && !progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].placeholder.pausable;
+
+	long total = (long)floor(-[progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].installStartedDate timeIntervalSinceDate:[NSDate.date earlierDate:progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].installEndedDate]] - pausedDuration);
 	
 	int seconds = total % 60;
 	int minutes = total / 60 % 60;
@@ -466,7 +498,7 @@ NSMutableDictionary *bulletinDictionary;
 	NSString *timeRemaining = [NSString stringWithFormat:@"Remaining: %@%@%@", hours > 0 ? [NSString stringWithFormat:@"%d%@ ", hours, @"h"] : @"", minutes > 0 ? [NSString stringWithFormat:@"%d%@ ", minutes, @"m"] : @"", (seconds > 0 || (minutes == 0 && hours == 0)) ? [NSString stringWithFormat:@"%d%@ ", seconds, @"s"] : @""];
 	if([timeRemaining hasSuffix:@" "]) timeRemaining = [timeRemaining substringToIndex:timeRemaining.length - 1];*/
 
-	self.progressLabel.text = [NSString stringWithFormat:@"%@%@%@", timeElapsed, self.progressView.progress >= 1 ? @" - " : @"", self.progressView.progress >= 1 ? @"Finished" : @""];
+	self.progressLabel.text = [NSString stringWithFormat:@"%@%@%@", timeElapsed, self.progressView.progress >= 1 || paused ? @" - " : @"", self.progressView.progress >= 1 ? @"Finished" : (paused ? @"Paused" : @"")];
 
 	if(self.progressView.progress >= 1){
 		[self.progressUpdateTimer invalidate];
@@ -562,7 +594,15 @@ NSMutableDictionary *bulletinDictionary;
 
 %new
 -(void)updateProgressLabel:(NSTimer*)timer{
-	long total = (long)floor(-[progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].installStartedDate timeIntervalSinceDate:[NSDate.date earlierDate:progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].installEndedDate]]);
+	if(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pauseDate) {
+		progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pausedDuration = @(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pausedDuration.doubleValue + -progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pauseDate.timeIntervalSinceNow);
+		progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pauseDate = NSDate.date;
+	}
+
+	double pausedDuration = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pausedDuration.doubleValue;
+	BOOL paused = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].placeholder.resumable && !progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].placeholder.pausable;
+
+	long total = (long)floor(-[progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].installStartedDate timeIntervalSinceDate:[NSDate.date earlierDate:progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].installEndedDate]] - pausedDuration);
 	
 	int seconds = total % 60;
 	int minutes = total / 60 % 60;
@@ -580,7 +620,7 @@ NSMutableDictionary *bulletinDictionary;
 	NSString *timeRemaining = [NSString stringWithFormat:@"Remaining: %@%@%@", hours > 0 ? [NSString stringWithFormat:@"%d%@ ", hours, @"h"] : @"", minutes > 0 ? [NSString stringWithFormat:@"%d%@ ", minutes, @"m"] : @"", (seconds > 0 || (minutes == 0 && hours == 0)) ? [NSString stringWithFormat:@"%d%@ ", seconds, @"s"] : @""];
 	if([timeRemaining hasSuffix:@" "]) timeRemaining = [timeRemaining substringToIndex:timeRemaining.length - 1];*/
 
-	self.progressLabel.text = [NSString stringWithFormat:@"%@%@%@", timeElapsed, self.progressView.progress >= 1 ? @" - " : @"", self.progressView.progress >= 1 ? @"Finished" : @""];
+	self.progressLabel.text = [NSString stringWithFormat:@"%@%@%@", timeElapsed, self.progressView.progress >= 1 || paused ? @" - " : @"", self.progressView.progress >= 1 ? @"Finished" : (paused ? @"Paused" : @"")];
 
 	if(self.progressView.progress >= 1){
 		[self.progressUpdateTimer invalidate];
