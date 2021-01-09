@@ -13,7 +13,12 @@
 @end
 
 @interface BBAction : NSObject
+@property (nonatomic,copy) NSString * identifier;
+@property (nonatomic,copy) NSURL * launchURL;
+@property (nonatomic,copy) NSString * launchBundleID;
++(id)actionWithIdentifier:(id)arg1 title:(id)arg2 ;
 +(id)actionWithLaunchURL:(id)arg1 ;
++(id)actionWithLaunchBundleID:(id)arg1 ;
 -(void)setCanBypassPinLock:(BOOL)arg1 ;
 -(void)setShouldDismissBulletin:(BOOL)arg1 ;
 @end
@@ -47,6 +52,7 @@
 
 @interface BBServer : NSObject
 -(void)publishBulletin:(BBBulletin*)arg1 destinations:(unsigned long long)arg2;
+-(void)_clearBulletinIDs:(id)arg1 forSectionID:(id)arg2 shouldSync:(BOOL)arg3 ;
 @end
 
 static BBServer *sharedServer;
@@ -95,6 +101,7 @@ extern dispatch_queue_t __BBServerQueue;
 @end
 
 static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progressDictionary;
+NSMutableDictionary *bulletinDictionary;
 
 %hook SBIconProgressView
 %property (nonatomic, strong) UILabel *progressLabel;
@@ -220,6 +227,7 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 
 	if([identifiers containsObject:self.bundleIdentifier] && [self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]){
 		if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
+		if(!bulletinDictionary) bulletinDictionary = [[NSMutableDictionary alloc] init];
 
 		((FBSApplicationPlaceholderProgress*)self.progress).installStartedDate = NSDate.date;
 		progressDictionary[self.bundleIdentifier] = (FBSApplicationPlaceholderProgress*)self.progress;
@@ -230,7 +238,8 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar\ncom.miwix.downloadbar14-progress"];
 		
 		NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
-		
+		bulletinDictionary[self.bundleIdentifier] = bulletinUUID;
+
 		[bulletin setSection:@"com.apple.Preferences"];
 		[bulletin setSectionID:@"com.apple.Preferences"];
 		
@@ -255,12 +264,19 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 		[defaultAction setShouldDismissBulletin:NO];
 		[bulletin setDefaultAction:defaultAction];
 
-		// NSMutableDictionary *supplementaryActions = [[NSMutableDictionary alloc] init];
-		// BBAction *openAction = [BBAction actionWithLaunchURL:[NSURL URLWithString:trackViewUrl]];
-		// [supplementaryActions setObject:openAction forKey:@"Open"];
-		// [supplementaryActions setObject:openAction forKey:@"Pause"];
-		// [supplementaryActions setObject:openAction forKey:@"Cancel"];
-		// [bulletin setSupplementaryActionsByLayout:supplementaryActions];
+		NSMutableDictionary *supplementaryActions = [NSMutableDictionary new];
+		NSMutableArray *supplementaryActionsArray = [NSMutableArray new];
+		BBAction *prioritizeAction = [BBAction actionWithIdentifier:@"prioritize_app_action" title:@"Prioritize"];
+		[prioritizeAction setLaunchURL:[NSURL URLWithString:trackViewUrl]];
+		[supplementaryActionsArray addObject:prioritizeAction];
+		BBAction *pauseAction = [BBAction actionWithIdentifier:@"pause_app_action" title:@"Pause"];
+		[pauseAction setLaunchURL:[NSURL URLWithString:trackViewUrl]];
+		[supplementaryActionsArray addObject:pauseAction];
+		BBAction *cancelAction = [BBAction actionWithIdentifier:@"cancel_app_action" title:@"Cancel"];
+		[cancelAction setLaunchURL:[NSURL URLWithString:trackViewUrl]];
+		[supplementaryActionsArray addObject:cancelAction];
+		[supplementaryActions setObject:supplementaryActionsArray forKey:@(0)];
+		[bulletin setSupplementaryActionsByLayout:supplementaryActions];
 
 		dispatch_async(__BBServerQueue, ^{
 			[sharedServer publishBulletin:bulletin destinations:4];
@@ -275,41 +291,34 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 	if([identifiers containsObject:self.bundleIdentifier]){
 		if([self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]) ((FBSApplicationPlaceholderProgress*)self.progress).installEndedDate = NSDate.date;
 
-		if(![[%c(SBLockScreenManager) sharedInstanceIfExists] isUILocked]){
-			BBBulletin *bulletin = [[BBBulletin alloc] init];
-			[bulletin setHeader:self.displayName];
-			[bulletin setTitle:@"Download Completed"];
-			[bulletin setMessage:[NSString stringWithFormat:@"%@ has finished installing", self.displayName]];
-			
-			NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
-			
-			[bulletin setSection:@"com.apple.Preferences"];
-			[bulletin setSectionID:@"com.apple.Preferences"];
-			
-			[bulletin setBulletinID:bulletinUUID];
-			[bulletin setRecordID:bulletinUUID];
-			[bulletin setThreadID:self.bundleIdentifier];
-			[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14-completed/%@", self.bundleIdentifier]];
-			[bulletin setDate:[NSDate date]];
+		BBBulletin *bulletin = [[BBBulletin alloc] init];
+		[bulletin setHeader:self.displayName];
+		[bulletin setTitle:[NSString stringWithFormat:@"%@ Installed", self.displayName]];
+		[bulletin setMessage:@"Tap to open"];
+		
+		NSString *bulletinUUID = bulletinDictionary[self.bundleIdentifier];
 
-			NSString *appInfoUrl = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@", self.bundleIdentifier];
+		dispatch_async(__BBServerQueue, ^{
+			[sharedServer _clearBulletinIDs:@[bulletinUUID] forSectionID:bulletin.sectionID shouldSync:YES];
+		});
 
-			NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:appInfoUrl]];
+		[bulletin setSection:@"com.apple.Preferences"];
+		[bulletin setSectionID:@"com.apple.Preferences"];
+		
+		[bulletin setBulletinID:bulletinUUID];
+		[bulletin setRecordID:bulletinUUID];
+		[bulletin setThreadID:self.bundleIdentifier];
+		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14-completed/%@", self.bundleIdentifier]];
+		[bulletin setDate:[NSDate date]];
 
-			NSError *e = nil;
-			NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error: &e];
+		BBAction *defaultAction = [BBAction actionWithLaunchBundleID:self.bundleIdentifier];
+		[defaultAction setCanBypassPinLock:YES];
+		[defaultAction setShouldDismissBulletin:YES];
+		[bulletin setDefaultAction:defaultAction];
 
-			NSString *trackViewUrl = [[[jsonDict objectForKey:@"results"] objectAtIndex:0] objectForKey:@"trackViewUrl"];
-
-			BBAction *defaultAction = [BBAction actionWithLaunchURL:[NSURL URLWithString:trackViewUrl]];
-			[defaultAction setCanBypassPinLock:YES];
-			[defaultAction setShouldDismissBulletin:YES];
-			[bulletin setDefaultAction:defaultAction];
-
-			dispatch_async(__BBServerQueue, ^{
-				[sharedServer publishBulletin:bulletin destinations:8];
-			});
-		}
+		dispatch_async(__BBServerQueue, ^{
+			[sharedServer publishBulletin:bulletin destinations:4];
+		});
 
 		[[NSNotificationCenter defaultCenter] removeObserver:self name:@"installsStarted" object:nil];
 		[[NSNotificationCenter defaultCenter] removeObserver:self name:@"installsFinished" object:nil];
