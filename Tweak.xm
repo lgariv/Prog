@@ -656,16 +656,6 @@ NSMutableDictionary *bulletinDictionary;
 @end
 
 %hook NCNotificationListCell
--(void)updateCellForContentViewController:(id)arg1 {
-	%orig;
-
-	if([self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
-		[self.contentViewController setupContent];
-	} else{
-		[self.contentViewController resetContent];
-	}
-}
-
 -(void)didMoveToSuperview{
 	%orig;
 
