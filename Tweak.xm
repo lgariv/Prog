@@ -196,13 +196,10 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 @property(getter=isResumable) BOOL resumable;
 @property(getter=isCancellable) BOOL cancellable;
 @property(nonatomic, readonly, strong) NSObject<FBSApplicationPlaceholderProgress> *progress;
--(BOOL)prioritizeWithResult:(/*^block*/id)arg1 ;
--(BOOL)pauseWithResult:(/*^block*/id)arg1 ;
--(BOOL)resumeWithResult:(/*^block*/id)arg1 ;
--(BOOL)cancelWithResult:(/*^block*/id)arg1 ;
--(void)resumeWithBulletin:(BBBulletin *)arg1 ;
--(void)pauseWithBulletin:(BBBulletin *)arg1 ;
--(void)cancelWithBulletin:(BBBulletin *)arg1 ;
+-(void)prioritize;
+-(void)pause;
+-(void)resume;
+-(void)cancel;
 @end
 
 @interface FBSApplicationPlaceholderProgress : NSObject <FBSApplicationPlaceholderProgress>
@@ -243,23 +240,8 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 -(void)_pauseWithResult:(id)result{
 	if([self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]) ((FBSApplicationPlaceholderProgress*)self.progress).pauseDate = NSDate.date;
 
-	return %orig;
-}
+	%orig;
 
--(void)_resumeWithResult:(id)result{
-	if([self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)] && ((FBSApplicationPlaceholderProgress*)self.progress).pauseDate) {
-		((FBSApplicationPlaceholderProgress*)self.progress).pausedDuration = @(((FBSApplicationPlaceholderProgress*)self.progress).pausedDuration.doubleValue + -((FBSApplicationPlaceholderProgress*)self.progress).pauseDate.timeIntervalSinceNow);
-		((FBSApplicationPlaceholderProgress*)self.progress).pauseDate = NULL;
-	}
-
-	return %orig;
-}
-
-%new
--(void)pauseWithBulletin:(BBBulletin *)arg1 {
-	if (!bulletinDictionary) bulletinDictionary = [[NSMutableDictionary alloc] init];
-	bulletinDictionary[self.bundleIdentifier] = arg1;
-	[self pauseWithResult:nil];
 	BBBulletin *bulletin = bulletinDictionary[self.bundleIdentifier];
 	NSMutableArray *actionsArray = bulletin.supplementaryActionsByLayout[@(0)];
 	BBAction *entryToRemove;
@@ -280,11 +262,14 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	});
 }
 
-%new
--(void)resumeWithBulletin:(BBBulletin *)arg1 {
-	if (!bulletinDictionary) bulletinDictionary = [[NSMutableDictionary alloc] init];
-	bulletinDictionary[self.bundleIdentifier] = arg1;
-	[self resumeWithResult:nil];
+-(void)_resumeWithResult:(id)result{
+	if([self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)] && ((FBSApplicationPlaceholderProgress*)self.progress).pauseDate) {
+		((FBSApplicationPlaceholderProgress*)self.progress).pausedDuration = @(((FBSApplicationPlaceholderProgress*)self.progress).pausedDuration.doubleValue + -((FBSApplicationPlaceholderProgress*)self.progress).pauseDate.timeIntervalSinceNow);
+		((FBSApplicationPlaceholderProgress*)self.progress).pauseDate = NULL;
+	}
+
+	%orig;
+
 	BBBulletin *bulletin = bulletinDictionary[self.bundleIdentifier];
 	NSMutableArray *actionsArray = bulletin.supplementaryActionsByLayout[@(0)];
 	BBAction *entryToRemove;
@@ -305,11 +290,9 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	});
 }
 
-%new
--(void)cancelWithBulletin:(BBBulletin *)arg1 {
-	if (!bulletinDictionary) bulletinDictionary = [[NSMutableDictionary alloc] init];
-	bulletinDictionary[self.bundleIdentifier] = arg1;
-	[self cancelWithResult:nil];
+-(void)_cancelWithResult:(id)result{
+	%orig;
+
 	NSString *bulletinUUID = bulletinDictionary[self.bundleIdentifier].bulletinID;
 	dispatch_async(__BBServerQueue, ^{
 		[sharedServer _clearBulletinIDs:@[bulletinUUID] forSectionID:bulletinUUID shouldSync:YES];
@@ -459,16 +442,16 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	NCNotificationRequest *req = arg3;
 	FBSApplicationPlaceholderProgress *prog = progressDictionary[req.threadIdentifier];
 	if ([action.identifier isEqualToString:@"prioritize_app_action"]) {
-		[prog.placeholder prioritizeWithResult:nil];
+		[prog.placeholder prioritize];
 		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
 	} else if ([action.identifier isEqualToString:@"pause_app_action"]) {
-		[prog.placeholder pauseWithBulletin:req.bulletin];
+		[prog.placeholder pause];
 		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
 	} else if ([action.identifier isEqualToString:@"resume_app_action"]) {
-		[prog.placeholder resumeWithBulletin:req.bulletin];
+		[prog.placeholder resume];
 		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
 	} else if ([action.identifier isEqualToString:@"cancel_app_action"]) {
-		[prog.placeholder cancelWithBulletin:req.bulletin];
+		[prog.placeholder cancel];
 		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
 	} else {
 		%orig;
