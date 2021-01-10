@@ -254,7 +254,6 @@ NSMutableDictionary *bulletinDictionary;
 
 		((FBSApplicationPlaceholderProgress*)self.progress).installStartedDate = NSDate.date;
 		progressDictionary[self.bundleIdentifier] = (FBSApplicationPlaceholderProgress*)self.progress;
-
 		BBBulletin *bulletin = [[BBBulletin alloc] init];
 		[bulletin setHeader:self.displayName];
 		[bulletin setTitle:@"Downloading"];
@@ -273,33 +272,38 @@ NSMutableDictionary *bulletinDictionary;
 		[bulletin setDate:[NSDate date]];
 		[bulletin setLockScreenPriority:1];
 
-		NSString *appInfoUrl = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@", self.bundleIdentifier];
+		@try {
+			NSString *appInfoUrl = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@", self.bundleIdentifier];
 
-		NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:appInfoUrl]];
+			NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:appInfoUrl]];
 
-		NSError *e = nil;
-		NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error: &e];
+			NSError *e = nil;
+			NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error: &e];
 
-		NSString *trackViewUrl = [[[jsonDict objectForKey:@"results"] objectAtIndex:0] objectForKey:@"trackViewUrl"];
+			NSString *trackViewUrl = [[[jsonDict objectForKey:@"results"] objectAtIndex:0] objectForKey:@"trackViewUrl"];
 
-		BBAction *defaultAction = [BBAction actionWithLaunchURL:[NSURL URLWithString:trackViewUrl]];
-		[defaultAction setCanBypassPinLock:YES];
-		[defaultAction setShouldDismissBulletin:NO];
-		[bulletin setDefaultAction:defaultAction];
+			BBAction *defaultAction = [BBAction actionWithLaunchURL:[NSURL URLWithString:trackViewUrl]];
+			[defaultAction setCanBypassPinLock:YES];
+			[defaultAction setShouldDismissBulletin:NO];
+			[bulletin setDefaultAction:defaultAction];
 
-		NSMutableDictionary *supplementaryActions = [NSMutableDictionary new];
-		NSMutableArray *supplementaryActionsArray = [NSMutableArray new];
-		BBAction *prioritizeAction = [BBAction actionWithIdentifier:@"prioritize_app_action" title:@"Prioritize"];
-		[prioritizeAction setLaunchURL:[NSURL URLWithString:trackViewUrl]];
-		[supplementaryActionsArray addObject:prioritizeAction];
-		BBAction *pauseAction = [BBAction actionWithIdentifier:@"pause_app_action" title:@"Pause"];
-		[pauseAction setLaunchURL:[NSURL URLWithString:trackViewUrl]];
-		[supplementaryActionsArray addObject:pauseAction];
-		BBAction *cancelAction = [BBAction actionWithIdentifier:@"cancel_app_action" title:@"Cancel"];
-		[cancelAction setLaunchURL:[NSURL URLWithString:trackViewUrl]];
-		[supplementaryActionsArray addObject:cancelAction];
-		[supplementaryActions setObject:supplementaryActionsArray forKey:@(0)];
-		[bulletin setSupplementaryActionsByLayout:supplementaryActions];
+			NSMutableDictionary *supplementaryActions = [NSMutableDictionary new];
+			NSMutableArray *supplementaryActionsArray = [NSMutableArray new];
+			BBAction *prioritizeAction = [BBAction actionWithIdentifier:@"prioritize_app_action" title:@"Prioritize"];
+			[prioritizeAction setLaunchURL:[NSURL URLWithString:trackViewUrl]];
+			[supplementaryActionsArray addObject:prioritizeAction];
+			BBAction *pauseAction = [BBAction actionWithIdentifier:@"pause_app_action" title:@"Pause"];
+			[pauseAction setLaunchURL:[NSURL URLWithString:trackViewUrl]];
+			[supplementaryActionsArray addObject:pauseAction];
+			BBAction *cancelAction = [BBAction actionWithIdentifier:@"cancel_app_action" title:@"Cancel"];
+			[cancelAction setLaunchURL:[NSURL URLWithString:trackViewUrl]];
+			[supplementaryActionsArray addObject:cancelAction];
+			[supplementaryActions setObject:supplementaryActionsArray forKey:@(0)];
+			[bulletin setSupplementaryActionsByLayout:supplementaryActions];
+		}
+		@catch (NSException *x) {
+			%log(x);
+		}
 
 		dispatch_async(__BBServerQueue, ^{
 			[sharedServer publishBulletin:bulletin destinations:4];
@@ -319,7 +323,14 @@ NSMutableDictionary *bulletinDictionary;
 		[bulletin setTitle:[NSString stringWithFormat:@"%@ Installed", self.displayName]];
 		[bulletin setMessage:@"Tap to open"];
 
-		NSString *bulletinUUID = bulletinDictionary[self.bundleIdentifier];
+		NSString *bulletinUUID;
+		@try {
+			bulletinUUID = bulletinDictionary[self.bundleIdentifier];
+		}
+		@catch (NSException *x) {
+			%log(x);
+			bulletinUUID = [[NSUUID UUID] UUIDString];
+		}
 
 		dispatch_async(__BBServerQueue, ^{
 			[sharedServer _clearBulletinIDs:@[bulletinUUID] forSectionID:bulletin.sectionID shouldSync:YES];
