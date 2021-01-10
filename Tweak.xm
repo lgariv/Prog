@@ -1,8 +1,7 @@
 @import Foundation;
 @import UIKit;
-@import UserNotifications;
 
-#import <UserNotifications/UserNotifications.h>
+#import <UIKit/UIKit.h>
 
 @interface BBSectionIconVariant : NSObject
 @property (nonatomic,copy) NSData * imageData;
@@ -16,6 +15,7 @@
 @property (nonatomic,copy) NSString * identifier;
 @property (nonatomic,copy) NSURL * launchURL;
 @property (nonatomic,copy) NSString * launchBundleID;
+@property (assign,nonatomic) long long actionType;
 +(id)actionWithIdentifier:(id)arg1 title:(id)arg2 ;
 +(id)actionWithLaunchURL:(id)arg1 ;
 +(id)actionWithLaunchBundleID:(id)arg1 ;
@@ -101,7 +101,7 @@ extern dispatch_queue_t __BBServerQueue;
 @end
 
 static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progressDictionary;
-NSMutableDictionary *bulletinDictionary;
+NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 
 %hook SBIconProgressView
 %property (nonatomic, strong) UILabel *progressLabel;
@@ -196,6 +196,13 @@ NSMutableDictionary *bulletinDictionary;
 @property(getter=isResumable) BOOL resumable;
 @property(getter=isCancellable) BOOL cancellable;
 @property(nonatomic, readonly, strong) NSObject<FBSApplicationPlaceholderProgress> *progress;
+-(BOOL)prioritizeWithResult:(/*^block*/id)arg1 ;
+-(BOOL)pauseWithResult:(/*^block*/id)arg1 ;
+-(BOOL)resumeWithResult:(/*^block*/id)arg1 ;
+-(BOOL)cancelWithResult:(/*^block*/id)arg1 ;
+-(void)resumeWithBulletin:(BBBulletin *)arg1 ;
+-(void)pauseWithBulletin:(BBBulletin *)arg1 ;
+-(void)cancelWithBulletin:(BBBulletin *)arg1 ;
 @end
 
 @interface FBSApplicationPlaceholderProgress : NSObject <FBSApplicationPlaceholderProgress>
@@ -218,6 +225,10 @@ NSMutableDictionary *bulletinDictionary;
 %property(nonatomic, strong) NSDate *pauseDate;
 %property(nonatomic, strong) NSNumber *pausedDuration;
 %end
+
+@interface BBResponse : NSObject
+-(void)setSendBlock:(id)arg1 ;
+@end
 
 %hook FBSApplicationPlaceholder
 -(instancetype)_initWithApplicationProxy:(id)proxy{
@@ -245,6 +256,71 @@ NSMutableDictionary *bulletinDictionary;
 }
 
 %new
+-(void)pauseWithBulletin:(BBBulletin *)arg1 {
+	if (!bulletinDictionary) bulletinDictionary = [[NSMutableDictionary alloc] init];
+	bulletinDictionary[self.bundleIdentifier] = arg1;
+	[self pauseWithResult:nil];
+	BBBulletin *bulletin = bulletinDictionary[self.bundleIdentifier];
+	NSMutableArray *actionsArray = bulletin.supplementaryActionsByLayout[@(0)];
+	BBAction *entryToRemove;
+	for (BBAction *entry in actionsArray) {
+		if ([entry.identifier isEqualToString:@"pause_app_action"])
+			entryToRemove = entry;
+	}
+	[actionsArray removeObject:entryToRemove];
+	BBAction *resumeAction = [BBAction actionWithIdentifier:@"resume_app_action" title:@"Resume"];
+	[resumeAction setActionType:2];
+	[resumeAction setCanBypassPinLock:YES];
+	[resumeAction setShouldDismissBulletin:NO];
+	[actionsArray insertObject:resumeAction atIndex:1];
+	[bulletin setSupplementaryActionsByLayout:[@{@(0) : actionsArray} mutableCopy]];
+
+	[bulletin setTitle:@"Download paused"];
+
+	dispatch_async(__BBServerQueue, ^{
+		[sharedServer publishBulletin:bulletin destinations:4];
+	});
+}
+
+%new
+-(void)resumeWithBulletin:(BBBulletin *)arg1 {
+	if (!bulletinDictionary) bulletinDictionary = [[NSMutableDictionary alloc] init];
+	bulletinDictionary[self.bundleIdentifier] = arg1;
+	[self resumeWithResult:nil];
+	BBBulletin *bulletin = bulletinDictionary[self.bundleIdentifier];
+	NSMutableArray *actionsArray = bulletin.supplementaryActionsByLayout[@(0)];
+	BBAction *entryToRemove;
+	for (BBAction *entry in actionsArray) {
+		if ([entry.identifier isEqualToString:@"resume_app_action"])
+			entryToRemove = entry;
+	}
+	[actionsArray removeObject:entryToRemove];
+	BBAction *resumeAction = [BBAction actionWithIdentifier:@"pause_app_action" title:@"Pause"];
+	[resumeAction setActionType:2];
+	[resumeAction setCanBypassPinLock:YES];
+	[resumeAction setShouldDismissBulletin:NO];
+	[actionsArray insertObject:resumeAction atIndex:1];
+	[bulletin setSupplementaryActionsByLayout:[@{@(0) : actionsArray} mutableCopy]];
+
+	[bulletin setTitle:@"Downloading"];
+
+	dispatch_async(__BBServerQueue, ^{
+		[sharedServer publishBulletin:bulletin destinations:4];
+	});
+}
+
+%new
+-(void)cancelWithBulletin:(BBBulletin *)arg1 {
+	if (!bulletinDictionary) bulletinDictionary = [[NSMutableDictionary alloc] init];
+	bulletinDictionary[self.bundleIdentifier] = arg1;
+	[self cancelWithResult:nil];
+	NSString *bulletinUUID = bulletinDictionary[self.bundleIdentifier].bulletinID;
+	dispatch_async(__BBServerQueue, ^{
+		[sharedServer _clearBulletinIDs:@[bulletinUUID] forSectionID:bulletinUUID shouldSync:YES];
+	});
+}
+
+%new
 -(void)installsStarted:(NSNotification*)notification{
 	NSArray<NSString*> *identifiers = notification.userInfo[@"identifiers"];
 
@@ -260,7 +336,6 @@ NSMutableDictionary *bulletinDictionary;
 		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar\ncom.miwix.downloadbar14-progress"];
 
 		NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
-		bulletinDictionary[self.bundleIdentifier] = bulletinUUID;
 
 		[bulletin setSection:@"com.apple.Preferences"];
 		[bulletin setSectionID:@"com.apple.Preferences"];
@@ -289,21 +364,33 @@ NSMutableDictionary *bulletinDictionary;
 
 			NSMutableDictionary *supplementaryActions = [NSMutableDictionary new];
 			NSMutableArray *supplementaryActionsArray = [NSMutableArray new];
+
 			BBAction *prioritizeAction = [BBAction actionWithIdentifier:@"prioritize_app_action" title:@"Prioritize"];
-			[prioritizeAction setLaunchURL:[NSURL URLWithString:trackViewUrl]];
+			[prioritizeAction setActionType:2];
+			[prioritizeAction setCanBypassPinLock:YES];
+			[prioritizeAction setShouldDismissBulletin:NO];
 			[supplementaryActionsArray addObject:prioritizeAction];
+
 			BBAction *pauseAction = [BBAction actionWithIdentifier:@"pause_app_action" title:@"Pause"];
-			[pauseAction setLaunchURL:[NSURL URLWithString:trackViewUrl]];
+			[pauseAction setActionType:2];
+			[pauseAction setCanBypassPinLock:YES];
+			[pauseAction setShouldDismissBulletin:NO];
 			[supplementaryActionsArray addObject:pauseAction];
+
 			BBAction *cancelAction = [BBAction actionWithIdentifier:@"cancel_app_action" title:@"Cancel"];
-			[cancelAction setLaunchURL:[NSURL URLWithString:trackViewUrl]];
+			[cancelAction setActionType:2];
+			[cancelAction setCanBypassPinLock:YES];
+			[cancelAction setShouldDismissBulletin:YES];
 			[supplementaryActionsArray addObject:cancelAction];
+
 			[supplementaryActions setObject:supplementaryActionsArray forKey:@(0)];
 			[bulletin setSupplementaryActionsByLayout:supplementaryActions];
 		}
 		@catch (NSException *x) {
-			%log(x);
+			NSLog(@"[DownloadBar] %@", x);
 		}
+
+		bulletinDictionary[self.bundleIdentifier] = bulletin;
 
 		dispatch_async(__BBServerQueue, ^{
 			[sharedServer publishBulletin:bulletin destinations:4];
@@ -323,13 +410,12 @@ NSMutableDictionary *bulletinDictionary;
 		[bulletin setTitle:[NSString stringWithFormat:@"%@ Installed", self.displayName]];
 		[bulletin setMessage:@"Tap to open"];
 
-		NSString *bulletinUUID;
+		NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
 		@try {
-			bulletinUUID = bulletinDictionary[self.bundleIdentifier];
+			bulletinUUID = bulletinDictionary[self.bundleIdentifier].bulletinID;
 		}
 		@catch (NSException *x) {
-			%log(x);
-			bulletinUUID = [[NSUUID UUID] UUIDString];
+			NSLog(@"[DownloadBar] %@", x);
 		}
 
 		dispatch_async(__BBServerQueue, ^{
@@ -357,6 +443,35 @@ NSMutableDictionary *bulletinDictionary;
 
 		[[NSNotificationCenter defaultCenter] removeObserver:self name:@"installsStarted" object:nil];
 		[[NSNotificationCenter defaultCenter] removeObserver:self name:@"installsFinished" object:nil];
+	}
+}
+%end
+
+@interface NCNotificationRequest : NSObject
+@property BBBulletin *bulletin;
+@property (nonatomic,copy,readonly) NSString * threadIdentifier;
+@end
+
+@interface NCNotificationAction : NSObject
+@property (nonatomic,copy,readonly) NSString * identifier;
+@property (nonatomic,copy,readonly) NSString * name;
+@end
+
+%hook CSNotificationDispatcher
+-(void)destination:(id)arg1 performAction:(id)arg2 forNotificationRequest:(id)arg3 requestAuthentication:(BOOL)arg4 withParameters:(id)arg5 completion:(/*^block*/id)arg6 {
+	NCNotificationAction *action = arg2;
+	NCNotificationRequest *req = arg3;
+	FBSApplicationPlaceholderProgress *prog = progressDictionary[req.threadIdentifier];
+	if ([action.identifier isEqualToString:@"prioritize_app_action"]) {
+		[prog.placeholder prioritizeWithResult:nil];
+	} else if ([action.identifier isEqualToString:@"pause_app_action"]) {
+		[prog.placeholder pauseWithBulletin:req.bulletin];
+	} else if ([action.identifier isEqualToString:@"resume_app_action"]) {
+		[prog.placeholder resumeWithBulletin:req.bulletin];
+	} else if ([action.identifier isEqualToString:@"cancel_app_action"]) {
+		[prog.placeholder cancelWithBulletin:req.bulletin];
+	} else {
+		%orig;
 	}
 }
 %end
@@ -418,10 +533,6 @@ NSMutableDictionary *bulletinDictionary;
 #pragma mark Handling Notification Content
 
 @interface PLPlatterView : UIView
-@end
-
-@interface NCNotificationRequest : NSObject
-@property BBBulletin *bulletin;
 @end
 
 @interface NCNotificationViewControllerView : UIView

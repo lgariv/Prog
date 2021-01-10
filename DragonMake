@@ -14,6 +14,5 @@ DownloadBar14:
   frameworks:
     - Foundation
     - UIKit
-    - UserNotifications
     - QuartzCore
     - BulletinBoard
