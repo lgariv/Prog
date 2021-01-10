@@ -464,12 +464,16 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	FBSApplicationPlaceholderProgress *prog = progressDictionary[req.threadIdentifier];
 	if ([action.identifier isEqualToString:@"prioritize_app_action"]) {
 		[prog.placeholder prioritizeWithResult:nil];
+		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
 	} else if ([action.identifier isEqualToString:@"pause_app_action"]) {
 		[prog.placeholder pauseWithBulletin:req.bulletin];
+		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
 	} else if ([action.identifier isEqualToString:@"resume_app_action"]) {
 		[prog.placeholder resumeWithBulletin:req.bulletin];
+		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
 	} else if ([action.identifier isEqualToString:@"cancel_app_action"]) {
 		[prog.placeholder cancelWithBulletin:req.bulletin];
+		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
 	} else {
 		%orig;
 	}
@@ -558,6 +562,7 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 @property(nonatomic, strong) UIView *progressContainerView;
 @property(nonatomic, strong) UILabel *progressLabel;
 @property(nonatomic, strong) NSTimer *progressUpdateTimer;
+-(BOOL)dismissPresentedViewControllerAndClearNotification:(BOOL)clear animated:(BOOL)animated;
 -(void)updateProgressLabel:(NSTimer*)timer;
 -(void)setupContent;
 -(void)resetContent;
@@ -699,6 +704,12 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 %property(nonatomic, strong) UILabel *progressLabel;
 %property(nonatomic, strong) NSTimer *progressUpdateTimer;
 
+-(void)viewDidLoad{
+	%orig;
+
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(dismissWithNotification:) name:@"dismissLongLook" object:nil];
+}
+
 -(void)viewWillAppear:(BOOL)animated{
 	%orig;
 
@@ -713,6 +724,13 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	if(self.progressUpdateTimer){
 		[self.progressUpdateTimer invalidate];
 		self.progressUpdateTimer = NULL;
+	}
+}
+
+%new
+-(void)dismissWithNotification:(NSNotification*)notification{
+	if([notification.userInfo[@"identifiers"] containsObject:[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]){
+		[self dismissPresentedViewControllerAndClearNotification:false animated:true];
 	}
 }
 
