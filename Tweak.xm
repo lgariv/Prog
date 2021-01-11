@@ -237,6 +237,12 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	return instance;
 }
 
+-(void)_prioritizeWithResult:(id)result{
+	if(self.resumable) [self resume];
+
+	%orig;
+}
+
 -(void)_pauseWithResult:(id)result{
 	if([self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]) ((FBSApplicationPlaceholderProgress*)self.progress).pauseDate = NSDate.date;
 
