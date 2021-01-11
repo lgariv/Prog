@@ -79,7 +79,7 @@ extern dispatch_queue_t __BBServerQueue;
 @end
 
 @interface SBIconProgressView : UIView
-@property (nonatomic, strong) UILabel *progressLabel;
+@property (nonatomic, strong) UILabel *additionalLabel;
 @property (nonatomic, strong) UIView *progressBar;
 @property (nonatomic, strong) UIView *progressBarBackground;
 @property (nonatomic, strong) NSString *bundleId;
@@ -104,7 +104,7 @@ static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progr
 NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 
 %hook SBIconProgressView
-%property (nonatomic, strong) UILabel *progressLabel;
+%property (nonatomic, strong) UILabel *additionalLabel;
 %property (nonatomic, strong) UIView *progressBar;
 %property (nonatomic, strong) UIView *progressBarBackground;
 %property (nonatomic, strong) NSString *bundleId;
@@ -120,15 +120,15 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 		self.progressBarBackground.backgroundColor = UIColor.darkGrayColor;
 		self.progressBarBackground.layer.cornerRadius = 2.5;
 
-		self.progressLabel = [[UILabel alloc] init];
-		self.progressLabel.translatesAutoresizingMaskIntoConstraints = false;
-		self.progressLabel.font = [UIFont boldSystemFontOfSize:10];
-		self.progressLabel.textAlignment = NSTextAlignmentCenter;
-		self.progressLabel.text = @"0%%";
+		self.additionalLabel = [[UILabel alloc] init];
+		self.additionalLabel.translatesAutoresizingMaskIntoConstraints = false;
+		self.additionalLabel.font = [UIFont boldSystemFontOfSize:10];
+		self.additionalLabel.textAlignment = NSTextAlignmentCenter;
+		self.additionalLabel.text = @"0%%";
 
 		[self addSubview: self.progressBarBackground];
 		[self addSubview: self.progressBar];
-		[self addSubview: self.progressLabel];
+		[self addSubview: self.additionalLabel];
 
 		[self setupSubviews];
 	}
@@ -137,8 +137,8 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 
 -(void)setDisplayedFraction:(double)arg1 {
 	%orig;
-	self.progressLabel.text = [NSString stringWithFormat:@"%i%%", (int)(arg1 * 100)];
-	self.progressLabel.textColor = [UIColor whiteColor];
+	self.additionalLabel.text = [NSString stringWithFormat:@"%i%%", (int)(arg1 * 100)];
+	self.additionalLabel.textColor = [UIColor whiteColor];
 	for(NSLayoutConstraint *width in self.constraints){
 		if(width.firstAnchor == self.progressBar.widthAnchor || width.secondAnchor == self.progressBar.widthAnchor){
 			width.active = false;
@@ -170,8 +170,8 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	[self.progressBar.topAnchor constraintEqualToAnchor:self.progressBarBackground.topAnchor].active = true;
 	[self.progressBar.bottomAnchor constraintEqualToAnchor:self.progressBarBackground.bottomAnchor].active = true;
 
-	[self.progressLabel.centerXAnchor constraintEqualToAnchor:self.centerXAnchor].active = true;
-	[self.progressLabel.bottomAnchor constraintEqualToAnchor:self.progressBarBackground.topAnchor constant:-2].active = true;
+	[self.additionalLabel.centerXAnchor constraintEqualToAnchor:self.centerXAnchor].active = true;
+	[self.additionalLabel.bottomAnchor constraintEqualToAnchor:self.progressBarBackground.topAnchor constant:-2].active = true;
 }
 %end
 
@@ -324,7 +324,7 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 		BBBulletin *bulletin = [[BBBulletin alloc] init];
 		[bulletin setHeader:self.displayName];
 		[bulletin setTitle:@"Downloading"];
-		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar\ncom.miwix.downloadbar14-progress"];
+		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar"];
 
 		NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
 
@@ -552,10 +552,8 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 @property NCNotificationRequest *notificationRequest;
 @property UIProgressView *progressView;
 @property(nonatomic, strong) UIView *progressContainerView;
-@property(nonatomic, strong) UILabel *progressLabel;
-@property(nonatomic, strong) NSTimer *progressUpdateTimer;
+//@property(nonatomic, strong) UILabel *additionalLabel;
 -(BOOL)dismissPresentedViewControllerAndClearNotification:(BOOL)clear animated:(BOOL)animated completion:(/*^block*/id)arg3;
--(void)updateProgressLabel:(NSTimer*)timer;
 -(void)setupContent;
 -(void)resetContent;
 @end
@@ -569,59 +567,13 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 %hook NCNotificationShortLookViewController
 %property(nonatomic, strong) UIProgressView *progressView;
 %property(nonatomic, strong) UIView *progressContainerView;
-%property(nonatomic, strong) UILabel *progressLabel;
-%property(nonatomic, strong) NSTimer *progressUpdateTimer;
+//%property(nonatomic, strong) UILabel *additionalLabel;
 
 -(void)viewWillAppear:(BOOL)animated{
 	%orig;
 
 	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
 		[self setupContent];
-	}
-}
-
--(void)viewWillDisappear:(BOOL)animated{
-	%orig;
-
-	if(self.progressUpdateTimer){
-		[self.progressUpdateTimer invalidate];
-		self.progressUpdateTimer = NULL;
-	}
-}
-
-%new
--(void)updateProgressLabel:(NSTimer*)timer{
-	if(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pauseDate) {
-		progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pausedDuration = @(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pausedDuration.doubleValue + -progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pauseDate.timeIntervalSinceNow);
-		progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pauseDate = NSDate.date;
-	}
-
-	double pausedDuration = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pausedDuration.doubleValue;
-	BOOL paused = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].placeholder.resumable && !progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].placeholder.pausable;
-
-	long total = (long)floor(-[progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].installStartedDate timeIntervalSinceDate:[NSDate.date earlierDate:progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].installEndedDate]] - pausedDuration);
-	
-	int seconds = total % 60;
-	int minutes = total / 60 % 60;
-	int hours = total / 60 / 60;
-
-	NSString *timeElapsed = [NSString stringWithFormat:@"Time elapsed: %@%@%@", hours > 0 ? [NSString stringWithFormat:@"%d%@ ", hours, @"h"] : @"", minutes > 0 ? [NSString stringWithFormat:@"%d%@ ", minutes, @"m"] : @"", (seconds > 0 || (minutes == 0 && hours == 0)) ? [NSString stringWithFormat:@"%d%@ ", seconds, @"s"] : @""];
-	if([timeElapsed hasSuffix:@" "]) timeElapsed = [timeElapsed substringToIndex:timeElapsed.length - 1];
-
-	/*total = (long)floor(MSHookIvar<NSProgress*>(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress").estimatedTimeRemaining.longValue);
-	
-	seconds = total % 60;
-	minutes = total / 60 % 60;
-	hours = total / 60 / 60;
-
-	NSString *timeRemaining = [NSString stringWithFormat:@"Remaining: %@%@%@", hours > 0 ? [NSString stringWithFormat:@"%d%@ ", hours, @"h"] : @"", minutes > 0 ? [NSString stringWithFormat:@"%d%@ ", minutes, @"m"] : @"", (seconds > 0 || (minutes == 0 && hours == 0)) ? [NSString stringWithFormat:@"%d%@ ", seconds, @"s"] : @""];
-	if([timeRemaining hasSuffix:@" "]) timeRemaining = [timeRemaining substringToIndex:timeRemaining.length - 1];*/
-
-	self.progressLabel.text = [NSString stringWithFormat:@"%@%@%@", timeElapsed, self.progressView.progress >= 1 || paused ? @" - " : @"", self.progressView.progress >= 1 ? @"Finished" : (paused ? @"Paused" : @"")];
-
-	if(self.progressView.progress >= 1){
-		[self.progressUpdateTimer invalidate];
-		self.progressUpdateTimer = NULL;
 	}
 }
 
@@ -632,7 +584,7 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 		self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
 		[self.progressContainerView addSubview:self.progressView];
 
-		self.progressLabel = [[UILabel alloc] init];
+		//self.additionalLabel = [[UILabel alloc] init];
 	}
 	
 	self.progressView.observedProgress = MSHookIvar<NSProgress*>(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress");
@@ -654,7 +606,7 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	if(!label) return;
 	
 	[self.progressContainerView.topAnchor constraintEqualToAnchor:label.topAnchor].active = true;
-	[self.progressContainerView.bottomAnchor constraintEqualToAnchor:label.centerYAnchor].active = true;
+	[self.progressContainerView.bottomAnchor constraintEqualToAnchor:label.bottomAnchor/*centerYAnchor*/].active = true;
 	[self.progressContainerView.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
 	[self.progressContainerView.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
 
@@ -662,30 +614,21 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	[self.progressView.leadingAnchor constraintEqualToAnchor:self.progressContainerView.leadingAnchor].active = true;
 	[self.progressView.trailingAnchor constraintEqualToAnchor:self.progressContainerView.trailingAnchor].active = true;
 
-	[self.progressLabel removeFromSuperview];
-	self.progressLabel.translatesAutoresizingMaskIntoConstraints = false;
-	[content addSubview:self.progressLabel];
-	self.progressLabel.textColor = UIColor.grayColor;
+	/*[self.additionalLabel removeFromSuperview];
+	self.additionalLabel.translatesAutoresizingMaskIntoConstraints = false;
+	[content addSubview:self.additionalLabel];
+	self.additionalLabel.textColor = UIColor.grayColor;*/
 
-	[self.progressLabel.topAnchor constraintEqualToAnchor:label.centerYAnchor].active = true;
-	[self.progressLabel.bottomAnchor constraintEqualToAnchor:label.bottomAnchor].active = true;
-	[self.progressLabel.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
-	[self.progressLabel.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
-
-	[self updateProgressLabel:NULL];
-
-	if(self.progressUpdateTimer && self.progressView.progress < 1){
-		[self.progressUpdateTimer invalidate];
-		self.progressUpdateTimer = NULL;
-	}
-
-	self.progressUpdateTimer = [NSTimer scheduledTimerWithTimeInterval:0.5 target:self selector:@selector(updateProgressLabel:) userInfo:nil repeats:YES];
+	/*[self.additionalLabel.topAnchor constraintEqualToAnchor:label.centerYAnchor].active = true;
+	[self.additionalLabel.bottomAnchor constraintEqualToAnchor:label.bottomAnchor].active = true;
+	[self.additionalLabel.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
+	[self.additionalLabel.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;*/
 }
 
 %new
 -(void)resetContent{
 	[self.progressContainerView removeFromSuperview];
-	[self.progressLabel removeFromSuperview];
+	//[self.additionalLabel removeFromSuperview];
 	((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView.secondaryLabel.hidden = false;
 }
 %end
@@ -693,8 +636,7 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 %hook NCNotificationLongLookViewController
 %property(nonatomic, strong) UIProgressView *progressView;
 %property(nonatomic, strong) UIView *progressContainerView;
-%property(nonatomic, strong) UILabel *progressLabel;
-%property(nonatomic, strong) NSTimer *progressUpdateTimer;
+//%property(nonatomic, strong) UILabel *additionalLabel;
 
 -(void)viewDidLoad{
 	%orig;
@@ -710,55 +652,10 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	}
 }
 
--(void)viewWillDisappear:(BOOL)animated{
-	%orig;
-
-	if(self.progressUpdateTimer){
-		[self.progressUpdateTimer invalidate];
-		self.progressUpdateTimer = NULL;
-	}
-}
-
 %new
 -(void)dismissWithNotification:(NSNotification*)notification{
 	if([notification.userInfo[@"identifiers"] containsObject:[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]){
 		[self dismissPresentedViewControllerAndClearNotification:false animated:true completion:nil];
-	}
-}
-
-%new
--(void)updateProgressLabel:(NSTimer*)timer{
-	if(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pauseDate) {
-		progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pausedDuration = @(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pausedDuration.doubleValue + -progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pauseDate.timeIntervalSinceNow);
-		progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pauseDate = NSDate.date;
-	}
-
-	double pausedDuration = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].pausedDuration.doubleValue;
-	BOOL paused = progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].placeholder.resumable && !progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].placeholder.pausable;
-
-	long total = (long)floor(-[progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].installStartedDate timeIntervalSinceDate:[NSDate.date earlierDate:progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]].installEndedDate]] - pausedDuration);
-	
-	int seconds = total % 60;
-	int minutes = total / 60 % 60;
-	int hours = total / 60 / 60;
-
-	NSString *timeElapsed = [NSString stringWithFormat:@"Time elapsed: %@%@%@", hours > 0 ? [NSString stringWithFormat:@"%d%@ ", hours, @"h"] : @"", minutes > 0 ? [NSString stringWithFormat:@"%d%@ ", minutes, @"m"] : @"", (seconds > 0 || (minutes == 0 && hours == 0)) ? [NSString stringWithFormat:@"%d%@ ", seconds, @"s"] : @""];
-	if([timeElapsed hasSuffix:@" "]) timeElapsed = [timeElapsed substringToIndex:timeElapsed.length - 1];
-
-	/*total = (long)floor(MSHookIvar<NSProgress*>(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress").estimatedTimeRemaining.longValue);
-	
-	seconds = total % 60;
-	minutes = total / 60 % 60;
-	hours = total / 60 / 60;
-
-	NSString *timeRemaining = [NSString stringWithFormat:@"Remaining: %@%@%@", hours > 0 ? [NSString stringWithFormat:@"%d%@ ", hours, @"h"] : @"", minutes > 0 ? [NSString stringWithFormat:@"%d%@ ", minutes, @"m"] : @"", (seconds > 0 || (minutes == 0 && hours == 0)) ? [NSString stringWithFormat:@"%d%@ ", seconds, @"s"] : @""];
-	if([timeRemaining hasSuffix:@" "]) timeRemaining = [timeRemaining substringToIndex:timeRemaining.length - 1];*/
-
-	self.progressLabel.text = [NSString stringWithFormat:@"%@%@%@", timeElapsed, self.progressView.progress >= 1 || paused ? @" - " : @"", self.progressView.progress >= 1 ? @"Finished" : (paused ? @"Paused" : @"")];
-
-	if(self.progressView.progress >= 1){
-		[self.progressUpdateTimer invalidate];
-		self.progressUpdateTimer = NULL;
 	}
 }
 
@@ -769,7 +666,7 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 		self.progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
 		[self.progressContainerView addSubview:self.progressView];
 
-		self.progressLabel = [[UILabel alloc] init];
+		//self.additionalLabel = [[UILabel alloc] init];
 	}
 	
 	self.progressView.observedProgress = MSHookIvar<NSProgress*>(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress");
@@ -797,30 +694,21 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	[self.progressView.leadingAnchor constraintEqualToAnchor:self.progressContainerView.leadingAnchor].active = true;
 	[self.progressView.trailingAnchor constraintEqualToAnchor:self.progressContainerView.trailingAnchor].active = true;
 
-	[self.progressLabel removeFromSuperview];
-	self.progressLabel.translatesAutoresizingMaskIntoConstraints = false;
-	[content addSubview:self.progressLabel];
-	self.progressLabel.textColor = UIColor.grayColor;
+	/*[self.additionalLabel removeFromSuperview];
+	self.additionalLabel.translatesAutoresizingMaskIntoConstraints = false;
+	[content addSubview:self.additionalLabel];
+	self.additionalLabel.textColor = UIColor.grayColor;*/
 
-	[self.progressLabel.topAnchor constraintEqualToAnchor:self.progressContainerView.bottomAnchor].active = true;
-	[self.progressLabel.heightAnchor constraintEqualToAnchor:content.primaryLabel.heightAnchor].active = true;
-	[self.progressLabel.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
-	[self.progressLabel.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;
-
-	[self updateProgressLabel:NULL];
-
-	if(self.progressUpdateTimer && self.progressView.progress < 1){
-		[self.progressUpdateTimer invalidate];
-		self.progressUpdateTimer = NULL;
-	}
-
-	self.progressUpdateTimer = [NSTimer scheduledTimerWithTimeInterval:0.5 target:self selector:@selector(updateProgressLabel:) userInfo:nil repeats:YES];
+	/*[self.additionalLabel.topAnchor constraintEqualToAnchor:self.progressContainerView.bottomAnchor].active = true;
+	[self.additionalLabel.heightAnchor constraintEqualToAnchor:content.primaryLabel.heightAnchor].active = true;
+	[self.additionalLabel.leadingAnchor constraintEqualToAnchor:label.leadingAnchor].active = true;
+	[self.additionalLabel.trailingAnchor constraintEqualToAnchor:label.trailingAnchor].active = true;*/
 }
 
 %new
 -(void)resetContent{
 	[self.progressContainerView removeFromSuperview];
-	[self.progressLabel removeFromSuperview];
+	//[self.additionalLabel removeFromSuperview];
 	MSHookIvar<NCNotificationContentView*>(MSHookIvar<NCNotificationLongLookView*>(self, "_lookView"), "_notificationContentView").secondaryTextView.hidden = false;
 }
 %end
