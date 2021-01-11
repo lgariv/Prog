@@ -557,7 +557,7 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 @property UIProgressView *progressView;
 @property(nonatomic, strong) UIView *progressContainerView;
 //@property(nonatomic, strong) UILabel *additionalLabel;
--(BOOL)dismissPresentedViewControllerAndClearNotification:(BOOL)clear animated:(BOOL)animated completion:(/*^block*/id)arg3;
+-(void)customContentRequestsDismiss:(id)content;
 -(void)setupContent;
 -(void)resetContent;
 @end
@@ -659,7 +659,7 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 %new
 -(void)dismissWithNotification:(NSNotification*)notification{
 	if([notification.userInfo[@"identifiers"] containsObject:[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]){
-		[self dismissPresentedViewControllerAndClearNotification:false animated:true completion:nil];
+		[self customContentRequestsDismiss:NULL];
 	}
 }
 
