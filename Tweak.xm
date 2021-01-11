@@ -265,6 +265,8 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	[actionsArray insertObject:resumeAction atIndex:1];
 	[bulletin setSupplementaryActionsByLayout:[@{@(0) : actionsArray} mutableCopy]];
 
+	[bulletin setTitle:@"Download paused"];
+
 	dispatch_async(__BBServerQueue, ^{
 		[sharedServer publishBulletin:bulletin destinations:4];
 	});
@@ -294,6 +296,8 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	[resumeAction setShouldDismissBulletin:NO];
 	[actionsArray insertObject:resumeAction atIndex:1];
 	[bulletin setSupplementaryActionsByLayout:[@{@(0) : actionsArray} mutableCopy]];
+
+	[bulletin setTitle:@"Downloading"];
 
 	dispatch_async(__BBServerQueue, ^{
 		[sharedServer publishBulletin:bulletin destinations:4];
