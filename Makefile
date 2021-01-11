@@ -6,7 +6,7 @@ export GO_EASY_ON_ME = 1
 export FINALPACKAGE = 1
 DEBUG = 0
 export ARCHS = arm64 arm64e
-export TARGET = iphone:clang:latest:13.5
+export TARGET = iphone:clang:13.5
 
 TWEAK_NAME = DownloadBar14
 
