@@ -243,6 +243,8 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	%orig;
 
 	BBBulletin *bulletin = bulletinDictionary[self.bundleIdentifier];
+	if(!bulletin) return;
+
 	NSMutableArray *actionsArray = bulletin.supplementaryActionsByLayout[@(0)];
 	BBAction *entryToRemove;
 	for (BBAction *entry in actionsArray) {
@@ -271,6 +273,8 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	%orig;
 
 	BBBulletin *bulletin = bulletinDictionary[self.bundleIdentifier];
+	if(!bulletin) return;
+
 	NSMutableArray *actionsArray = bulletin.supplementaryActionsByLayout[@(0)];
 	BBAction *entryToRemove;
 	for (BBAction *entry in actionsArray) {
@@ -294,6 +298,8 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	%orig;
 
 	NSString *bulletinUUID = bulletinDictionary[self.bundleIdentifier].bulletinID;
+	if(!bulletinUUID) return;
+
 	dispatch_async(__BBServerQueue, ^{
 		[sharedServer _clearBulletinIDs:@[bulletinUUID] forSectionID:bulletinUUID shouldSync:YES];
 	});
@@ -397,9 +403,10 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 			NSLog(@"[DownloadBar] %@", x);
 		}
 
-		dispatch_async(__BBServerQueue, ^{
+		if(bulletinUUID) dispatch_async(__BBServerQueue, ^{
 			[sharedServer _clearBulletinIDs:@[bulletinUUID] forSectionID:bulletin.sectionID shouldSync:YES];
 		});
+		else bulletinUUID = [[NSUUID UUID] UUIDString];
 
 		[bulletin setSection:@"com.apple.Preferences"];
 		[bulletin setSectionID:@"com.apple.Preferences"];
