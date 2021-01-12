@@ -24,6 +24,7 @@
 @end
 
 @interface BBBulletin : NSObject
+@property (assign,nonatomic) BOOL ignoresDowntime;
 @property (nonatomic,copy) BBAction * defaultAction; 
 @property (nonatomic,retain) NSMutableDictionary * supplementaryActionsByLayout;
 @property (nonatomic,readonly) NSString * sectionDisplayName;
@@ -385,6 +386,7 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 			NSLog(@"[DownloadBar] %@", x);
 		}
 
+                [bulletin setIgnoresDowntime:YES];
 		bulletinDictionary[self.bundleIdentifier] = bulletin;
 
 		dispatch_async(__BBServerQueue, ^{
@@ -432,6 +434,8 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 		[defaultAction setCanBypassPinLock:YES];
 		[defaultAction setShouldDismissBulletin:YES];
 		[bulletin setDefaultAction:defaultAction];
+
+                [bulletin setIgnoresDowntime:YES];
 
 		dispatch_async(__BBServerQueue, ^{
 			[sharedServer publishBulletin:bulletin destinations:14];
