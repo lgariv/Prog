@@ -72,12 +72,6 @@ extern dispatch_queue_t __BBServerQueue;
 @property NSString *displayName;
 @end
 
-@interface SBApplicationController : NSObject
--(SBApplication*)applicationWithBundleIdentifier:(NSString*)identifier;
-
-+(instancetype)sharedInstance;
-@end
-
 @interface SBIconProgressView : UIView
 @property (nonatomic, strong) UILabel *additionalLabel;
 @property (nonatomic, strong) UIView *progressBar;
@@ -100,8 +94,9 @@ extern dispatch_queue_t __BBServerQueue;
 @property (nonatomic,readonly) __kindof SBIcon *icon;
 @end
 
-static NSMutableDictionary<NSString*, FBSApplicationPlaceholderProgress*> *progressDictionary;
-NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
+static NSMutableDictionary<NSString*, id> *progressDictionary;
+static NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
+static BOOL readdedNotifications = false;
 
 %hook SBIconProgressView
 %property (nonatomic, strong) UILabel *additionalLabel;
@@ -196,10 +191,13 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 @property(getter=isResumable) BOOL resumable;
 @property(getter=isCancellable) BOOL cancellable;
 @property(nonatomic, readonly, strong) NSObject<FBSApplicationPlaceholderProgress> *progress;
+@property() NSNumber *shouldRecallOnceProgressIsSet;
 -(void)prioritize;
 -(void)pause;
+-(void)_pauseWithResult:(id)result;
 -(void)resume;
 -(void)cancel;
+-(void)installsStarted:(NSNotification*)notification;
 @end
 
 @interface FBSApplicationPlaceholderProgress : NSObject <FBSApplicationPlaceholderProgress>
@@ -212,11 +210,20 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 +(instancetype)sharedInstanceIfExists;
 @end
 
-%hook FBSApplicationPlaceholderProgress
-%property(nonatomic, strong) NSDate *installStartedDate;
-%property(nonatomic, strong) NSDate *installEndedDate;
-%property(nonatomic, strong) NSDate *pauseDate;
-%property(nonatomic, strong) NSNumber *pausedDuration;
+@interface FBSApplicationLibrary : NSObject
+-(NSArray*)allPlaceholders;
+@end
+
+%hook FBSApplicationLibrary
+-(void)_load{
+	%orig;
+
+	if(!readdedNotifications){
+		readdedNotifications = true;
+
+		for(FBSApplicationPlaceholder *placeholder in [self allPlaceholders]) [placeholder installsStarted:NULL];
+	}
+}
 %end
 
 @interface BBResponse : NSObject
@@ -224,6 +231,8 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 @end
 
 %hook FBSApplicationPlaceholder
+%property(nonatomic) NSNumber *shouldRecallOnceProgressIsSet;
+
 -(instancetype)_initWithApplicationProxy:(id)proxy{
 	FBSApplicationPlaceholder *instance = %orig;
 
@@ -304,11 +313,20 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	});
 }
 
+-(void)_reloadProgress{
+	%orig;
+
+	if(self.shouldRecallOnceProgressIsSet && [self.shouldRecallOnceProgressIsSet boolValue]){
+		[self installsStarted:NULL];
+		self.shouldRecallOnceProgressIsSet = @false;
+	}
+}
+
 %new
 -(void)installsStarted:(NSNotification*)notification{
 	NSArray<NSString*> *identifiers = notification.userInfo[@"identifiers"];
 
-	if([identifiers containsObject:self.bundleIdentifier] && [self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]){
+	if(([identifiers containsObject:self.bundleIdentifier] || !notification) && [self.progress isKindOfClass:[FBSApplicationPlaceholderProgress class]]){
 		if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
 		if(!bulletinDictionary) bulletinDictionary = [[NSMutableDictionary alloc] init];
 
@@ -375,9 +393,13 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 
 		bulletinDictionary[self.bundleIdentifier] = bulletin;
 
-		dispatch_async(__BBServerQueue, ^{
+		dispatch_sync(__BBServerQueue, ^{
 			[sharedServer publishBulletin:bulletin destinations:4];
 		});
+
+		if(!self.pausable && self.resumable) [self _pauseWithResult:NULL];
+	} else if(!notification){
+		self.shouldRecallOnceProgressIsSet = @true;
 	}
 }
 
@@ -589,11 +611,11 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	self.progressView.progressTintColor = [UIColor systemBlueColor];
 	self.progressView.trackTintColor = [UIColor lightGrayColor];
 	
+	if(!label) return;
+
 	[self.progressContainerView removeFromSuperview];
 	[content addSubview:self.progressContainerView];
 	self.progressContainerView.translatesAutoresizingMaskIntoConstraints = false;
-
-	if(!label) return;
 	
 	[self.progressContainerView.topAnchor constraintEqualToAnchor:label.topAnchor].active = true;
 	[self.progressContainerView.bottomAnchor constraintEqualToAnchor:label.bottomAnchor/*centerYAnchor*/].active = true;
@@ -708,6 +730,16 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 @end
 
 %hook NCNotificationListCell
+-(void)_layoutContentView{
+	%orig;
+
+	if([self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+		[self.contentViewController setupContent];
+	} else{
+		[self.contentViewController resetContent];
+	}
+}
+
 -(void)didMoveToSuperview{
 	%orig;
 
