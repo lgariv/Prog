@@ -175,7 +175,7 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 }
 %end
 
-#pragma mark Handling App Installation Queues, Postint Push Notfiications
+#pragma mark Handling App Installation Queues, Posting Push Notifications
 
 @interface LSApplicationProxy : NSObject
 @property(nonatomic, readonly, strong) NSString *applicationIdentifier;
