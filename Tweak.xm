@@ -204,10 +204,6 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 
 @interface FBSApplicationPlaceholderProgress : NSObject <FBSApplicationPlaceholderProgress>
 @property FBSApplicationPlaceholder *placeholder;
-@property(nonatomic, strong) NSDate *installStartedDate;
-@property(nonatomic, strong) NSDate *installEndedDate;
-@property(nonatomic, strong) NSDate *pauseDate;
-@property(nonatomic, strong) NSNumber *pausedDuration;
 @end
 
 @interface SBLockScreenManager : NSObject
@@ -244,8 +240,6 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 }
 
 -(void)_pauseWithResult:(id)result{
-	if([self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]) ((FBSApplicationPlaceholderProgress*)self.progress).pauseDate = NSDate.date;
-
 	%orig;
 
 	BBBulletin *bulletin = bulletinDictionary[self.bundleIdentifier];
@@ -273,11 +267,6 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 }
 
 -(void)_resumeWithResult:(id)result{
-	if([self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)] && ((FBSApplicationPlaceholderProgress*)self.progress).pauseDate) {
-		((FBSApplicationPlaceholderProgress*)self.progress).pausedDuration = @(((FBSApplicationPlaceholderProgress*)self.progress).pausedDuration.doubleValue + -((FBSApplicationPlaceholderProgress*)self.progress).pauseDate.timeIntervalSinceNow);
-		((FBSApplicationPlaceholderProgress*)self.progress).pauseDate = NULL;
-	}
-
 	%orig;
 
 	BBBulletin *bulletin = bulletinDictionary[self.bundleIdentifier];
@@ -323,7 +312,6 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 		if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
 		if(!bulletinDictionary) bulletinDictionary = [[NSMutableDictionary alloc] init];
 
-		((FBSApplicationPlaceholderProgress*)self.progress).installStartedDate = NSDate.date;
 		progressDictionary[self.bundleIdentifier] = (FBSApplicationPlaceholderProgress*)self.progress;
 		BBBulletin *bulletin = [[BBBulletin alloc] init];
 		[bulletin setHeader:self.displayName];
@@ -398,8 +386,6 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 	NSArray<NSString*> *identifiers = notification.userInfo[@"identifiers"];
 
 	if([identifiers containsObject:self.bundleIdentifier]){
-		if([self.progress isKindOfClass:%c(FBSApplicationPlaceholderProgress)]) ((FBSApplicationPlaceholderProgress*)self.progress).installEndedDate = NSDate.date;
-
 		BBBulletin *bulletin = [[BBBulletin alloc] init];
 		[bulletin setHeader:self.displayName];
 		[bulletin setTitle:[NSString stringWithFormat:@"%@ Installed", self.displayName]];
@@ -436,7 +422,7 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 		dispatch_async(__BBServerQueue, ^{
 			[sharedServer publishBulletin:bulletin destinations:14];
 		});
-
+		
 		[[NSNotificationCenter defaultCenter] removeObserver:self name:@"installsStarted" object:nil];
 		[[NSNotificationCenter defaultCenter] removeObserver:self name:@"installsFinished" object:nil];
 	}
