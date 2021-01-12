@@ -25,6 +25,7 @@
 
 @interface BBBulletin : NSObject
 @property (assign,nonatomic) BOOL ignoresDowntime;
+@property (assign,nonatomic) BOOL ignoresQuietMode;
 @property (nonatomic,copy) BBAction * defaultAction; 
 @property (nonatomic,retain) NSMutableDictionary * supplementaryActionsByLayout;
 @property (nonatomic,readonly) NSString * sectionDisplayName;
@@ -387,6 +388,7 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 		}
 
                 [bulletin setIgnoresDowntime:YES];
+                [bulletin setIgnoresQuietMode:YES];
 		bulletinDictionary[self.bundleIdentifier] = bulletin;
 
 		dispatch_async(__BBServerQueue, ^{
@@ -436,6 +438,7 @@ NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 		[bulletin setDefaultAction:defaultAction];
 
                 [bulletin setIgnoresDowntime:YES];
+                [bulletin setIgnoresQuietMode:YES];
 
 		dispatch_async(__BBServerQueue, ^{
 			[sharedServer publishBulletin:bulletin destinations:14];
