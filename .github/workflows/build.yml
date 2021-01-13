@@ -1,8 +1,8 @@
-name: Beta
+name: Release
 on:
   push:
     branches:
-      - test-build
+      - main
 env:
   DEVELOPER_DIR: /Applications/Xcode_11.7.app/Contents/Developer
 jobs:
@@ -74,8 +74,8 @@ jobs:
       with:
         tag_name: v${{ env.TWEAK_VER }}-beta
         release_name: Beta v${{ env.TWEAK_VER }}
-        draft: false
-        prerelease: true
+        draft: true
+        prerelease: false
         
     - name: Upload Release Asset
       if: ${{ steps.build_package.outputs.package != 0 }}
