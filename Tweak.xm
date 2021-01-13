@@ -328,7 +328,7 @@ static BOOL readdedNotifications = false;
 -(void)installsStarted:(NSNotification*)notification{
 	NSArray<NSString*> *identifiers = notification.userInfo[@"identifiers"];
 
-	if(([identifiers containsObject:self.bundleIdentifier] || !notification) && [self.progress isKindOfClass:[FBSApplicationPlaceholderProgress class]]){
+	if(([identifiers containsObject:self.bundleIdentifier] || !notification) && [self.progress isKindOfClass:[%c(FBSApplicationPlaceholderProgress) class]]){
 		if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
 		if(!bulletinDictionary) bulletinDictionary = [[NSMutableDictionary alloc] init];
 
