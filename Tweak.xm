@@ -71,7 +71,13 @@ extern dispatch_queue_t __BBServerQueue;
 #define PROGRESSBAR_INSET 7
 
 @interface SBApplication : NSObject
-@property NSString *displayName;
+@property (nonatomic,readonly) NSString * bundleIdentifier;
+@property (nonatomic,readonly) NSString * displayName;
+@end
+
+@interface SBApplicationController : NSObject
+@property(class, readonly) SBApplicationController *sharedInstance;
+-(SBApplication*)applicationWithBundleIdentifier:(NSString*)identifier;
 @end
 
 @interface SBIconProgressView : UIView
@@ -223,7 +229,72 @@ static BOOL readdedNotifications = false;
 	if(!readdedNotifications){
 		readdedNotifications = true;
 
-		for(FBSApplicationPlaceholder *placeholder in [self allPlaceholders]) [placeholder installsStarted:NULL];
+		dispatch_async(dispatch_get_main_queue(), ^{
+			NSMutableArray *active = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.downloadbar14/active"]).mutableCopy;
+			NSMutableArray *activeApps = active.mutableCopy;
+			if(!active) active = [[NSMutableArray alloc] init];
+
+			NSMutableArray *finished = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.downloadbar14/finished"]).mutableCopy;
+			if(!finished) finished = [[NSMutableArray alloc] init];
+
+			for(FBSApplicationPlaceholder *placeholder in [self allPlaceholders]) {
+				[placeholder installsStarted:NULL];
+				[activeApps removeObject:placeholder.bundleIdentifier];
+			}
+
+			for(NSString *identifier in activeApps) {
+				[active removeObject:identifier];
+				[finished addObject:identifier];
+			}
+
+			for(NSString *identifier in finished){
+				SBApplication *app = [[%c(SBApplicationController) sharedInstance] applicationWithBundleIdentifier:identifier];
+
+				__block BBBulletin *bulletin = [[BBBulletin alloc] init];
+				[bulletin setHeader:app.displayName];
+				[bulletin setTitle:[NSString stringWithFormat:@"%@ Installed", app.displayName]];
+				[bulletin setMessage:@"Tap to open"];
+
+				NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
+				@try {
+					bulletinUUID = bulletinDictionary[app.bundleIdentifier].bulletinID;
+				}
+				@catch (NSException *x) {
+					NSLog(@"[DownloadBar] %@", x);
+				}
+
+				if(bulletinUUID) dispatch_async(__BBServerQueue, ^{
+					[sharedServer _clearBulletinIDs:@[bulletinUUID] forSectionID:bulletin.sectionID shouldSync:YES];
+				});
+				else bulletinUUID = [[NSUUID UUID] UUIDString];
+
+				[bulletin setSection:@"com.apple.Preferences"];
+				[bulletin setSectionID:@"com.apple.Preferences"];
+
+				[bulletin setBulletinID:bulletinUUID];
+				[bulletin setRecordID:bulletinUUID];
+				[bulletin setThreadID:app.bundleIdentifier];
+				[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14-completed/%@", app.bundleIdentifier]];
+				[bulletin setDate:[NSDate date]];
+				[bulletin setLockScreenPriority:1];
+
+				BBAction *defaultAction = [BBAction actionWithLaunchBundleID:app.bundleIdentifier];
+				[defaultAction setCanBypassPinLock:YES];
+				[defaultAction setShouldDismissBulletin:YES];
+				[bulletin setDefaultAction:defaultAction];
+
+				[bulletin setIgnoresDowntime:YES];
+				[bulletin setIgnoresQuietMode:YES];
+
+				dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), __BBServerQueue, ^{
+					[sharedServer publishBulletin:bulletin destinations:14];
+				});
+			}
+
+			[NSUserDefaults.standardUserDefaults setObject:active forKey:@"com.miwix.downloadbar14/active"];
+			[NSUserDefaults.standardUserDefaults setObject:finished forKey:@"com.miwix.downloadbar14/finished"];
+			[NSUserDefaults.standardUserDefaults synchronize];
+		});
 	}
 }
 %end
@@ -332,6 +403,13 @@ static BOOL readdedNotifications = false;
 		if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
 		if(!bulletinDictionary) bulletinDictionary = [[NSMutableDictionary alloc] init];
 
+		NSMutableArray *active = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.downloadbar14/active"]).mutableCopy;
+		if(!active) active = [[NSMutableArray alloc] init];
+		[active removeObject:self.bundleIdentifier];
+		[active addObject:self.bundleIdentifier];
+		[NSUserDefaults.standardUserDefaults setObject:active forKey:@"com.miwix.downloadbar14/active"];
+		[NSUserDefaults.standardUserDefaults synchronize];
+
 		progressDictionary[self.bundleIdentifier] = (FBSApplicationPlaceholderProgress*)self.progress;
 		BBBulletin *bulletin = [[BBBulletin alloc] init];
 		[bulletin setHeader:self.displayName];
@@ -393,8 +471,8 @@ static BOOL readdedNotifications = false;
 			NSLog(@"[DownloadBar] %@", x);
 		}
 
-                [bulletin setIgnoresDowntime:YES];
-                [bulletin setIgnoresQuietMode:YES];
+        [bulletin setIgnoresDowntime:YES];
+        [bulletin setIgnoresQuietMode:YES];
 		bulletinDictionary[self.bundleIdentifier] = bulletin;
 
 		dispatch_sync(__BBServerQueue, ^{
@@ -412,6 +490,17 @@ static BOOL readdedNotifications = false;
 	NSArray<NSString*> *identifiers = notification.userInfo[@"identifiers"];
 
 	if([identifiers containsObject:self.bundleIdentifier]){
+		NSMutableArray *active = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.downloadbar14/active"]).mutableCopy;
+		[active removeObject:self.bundleIdentifier];
+		[NSUserDefaults.standardUserDefaults setObject:active forKey:@"com.miwix.downloadbar14/active"];
+
+		NSMutableArray *finished = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.downloadbar14/finished"]).mutableCopy;
+		if(!finished) finished = [[NSMutableArray alloc] init];
+		[finished removeObject:self.bundleIdentifier];
+		[finished addObject:self.bundleIdentifier];
+		[NSUserDefaults.standardUserDefaults setObject:finished forKey:@"com.miwix.downloadbar14/finished"];
+		[NSUserDefaults.standardUserDefaults synchronize];
+
 		BBBulletin *bulletin = [[BBBulletin alloc] init];
 		[bulletin setHeader:self.displayName];
 		[bulletin setTitle:[NSString stringWithFormat:@"%@ Installed", self.displayName]];
@@ -445,8 +534,8 @@ static BOOL readdedNotifications = false;
 		[defaultAction setShouldDismissBulletin:YES];
 		[bulletin setDefaultAction:defaultAction];
 
-                [bulletin setIgnoresDowntime:YES];
-                [bulletin setIgnoresQuietMode:YES];
+        [bulletin setIgnoresDowntime:YES];
+        [bulletin setIgnoresQuietMode:YES];
 
 		dispatch_async(__BBServerQueue, ^{
 			[sharedServer publishBulletin:bulletin destinations:14];
@@ -487,6 +576,16 @@ static BOOL readdedNotifications = false;
 		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
 	} else {
 		%orig;
+	}
+
+	if([req.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14-completed/"]){
+		NSMutableArray *finished = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.downloadbar14/finished"]).mutableCopy;
+		if(!finished) finished = [[NSMutableArray alloc] init];
+
+		[finished removeObject:req.threadIdentifier];
+
+		[NSUserDefaults.standardUserDefaults setObject:finished forKey:@"com.miwix.downloadbar14/finished"];
+		[NSUserDefaults.standardUserDefaults synchronize];
 	}
 }
 %end
