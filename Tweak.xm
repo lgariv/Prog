@@ -110,7 +110,7 @@ static BOOL readdedNotifications = false;
 %property (nonatomic, strong) UILabel *additionalLabel;
 %property (nonatomic, strong) UIView *progressBar;
 %property (nonatomic, strong) UIView *progressBarBackground;
-%property (nonatomic, strong) NSString *bundleId;
+%property (nonatomic, retain) NSString *bundleId;
 -(id)initWithFrame:(CGRect)arg1 {
 	if ((self = %orig)) {
 		self.progressBar = [[UIView alloc] init];
@@ -304,7 +304,7 @@ static BOOL readdedNotifications = false;
 @end
 
 %hook FBSApplicationPlaceholder
-%property(nonatomic) NSNumber *shouldRecallOnceProgressIsSet;
+%property(nonatomic, retain) NSNumber *shouldRecallOnceProgressIsSet;
 
 -(instancetype)_initWithApplicationProxy:(id)proxy{
 	FBSApplicationPlaceholder *instance = %orig;
@@ -564,13 +564,13 @@ static BOOL readdedNotifications = false;
 	FBSApplicationPlaceholderProgress *prog = progressDictionary[req.threadIdentifier];
 	if ([action.identifier isEqualToString:@"prioritize_app_action"]) {
 		[prog.placeholder prioritize];
-		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
+		[[NSNotificationCenter defaultCenter] postNotificationName:@"exitLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
 	} else if ([action.identifier isEqualToString:@"pause_app_action"]) {
 		[prog.placeholder pause];
-		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
+		[[NSNotificationCenter defaultCenter] postNotificationName:@"exitLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
 	} else if ([action.identifier isEqualToString:@"resume_app_action"]) {
 		[prog.placeholder resume];
-		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
+		[[NSNotificationCenter defaultCenter] postNotificationName:@"exitLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
 	} else if ([action.identifier isEqualToString:@"cancel_app_action"]) {
 		[prog.placeholder cancel];
 		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
@@ -668,8 +668,9 @@ static BOOL readdedNotifications = false;
 
 @interface NCNotificationViewController : UIViewController
 @property NCNotificationRequest *notificationRequest;
-@property UIProgressView *progressView;
+@property(nonatomic, strong) UIProgressView *progressView;
 @property(nonatomic, strong) UIView *progressContainerView;
+@property(readonly) NSString *bundleId;
 //@property(nonatomic, strong) UILabel *additionalLabel;
 -(void)customContentRequestsDismiss:(id)content;
 -(void)setupContent;
@@ -685,7 +686,12 @@ static BOOL readdedNotifications = false;
 %hook NCNotificationShortLookViewController
 %property(nonatomic, strong) UIProgressView *progressView;
 %property(nonatomic, strong) UIView *progressContainerView;
+%property(readonly) NSString *bundleId;
 //%property(nonatomic, strong) UILabel *additionalLabel;
+
+-(NSString*)bundleId {
+	return [NSString stringWithFormat:@"%@", [self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
+}
 
 -(void)viewWillAppear:(BOOL)animated{
 	%orig;
@@ -754,11 +760,17 @@ static BOOL readdedNotifications = false;
 %hook NCNotificationLongLookViewController
 %property(nonatomic, strong) UIProgressView *progressView;
 %property(nonatomic, strong) UIView *progressContainerView;
+%property(readonly) NSString *bundleId;
 //%property(nonatomic, strong) UILabel *additionalLabel;
+
+-(NSString*)bundleId {
+	return [NSString stringWithFormat:@"%@", [self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
+}
 
 -(void)viewDidLoad{
 	%orig;
 
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(exitWithNotification:) name:@"exitLongLook" object:nil];
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(dismissWithNotification:) name:@"dismissLongLook" object:nil];
 }
 
@@ -771,9 +783,18 @@ static BOOL readdedNotifications = false;
 }
 
 %new
--(void)dismissWithNotification:(NSNotification*)notification{
-	if([notification.userInfo[@"identifiers"] containsObject:[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]){
+-(void)exitWithNotification:(NSNotification*)notification{
+	if([notification.userInfo[@"identifiers"] containsObject:self.bundleId]){
 		[self customContentRequestsDismiss:NULL];
+	}
+}
+
+%new
+-(void)dismissWithNotification:(NSNotification*)notification{
+	if([notification.userInfo[@"identifiers"] containsObject:self.bundleId]){
+		[self dismissViewControllerAnimated:YES completion:^{
+			[bulletinDictionary removeObjectForKey:self.bundleId];
+		}];
 	}
 }
 
@@ -787,7 +808,7 @@ static BOOL readdedNotifications = false;
 		//self.additionalLabel = [[UILabel alloc] init];
 	}
 	
-	self.progressView.observedProgress = MSHookIvar<NSProgress*>(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress");
+	self.progressView.observedProgress = MSHookIvar<NSProgress*>(progressDictionary[self.bundleId], "_progress");
 	if(self.progressView.observedProgress == nil) self.progressView.progress = 1;
 
 	NCNotificationContentView *content = MSHookIvar<NCNotificationContentView*>(MSHookIvar<NCNotificationLongLookView*>(self, "_lookView"), "_notificationContentView");
