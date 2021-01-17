@@ -286,7 +286,7 @@ static BOOL readdedNotifications = false;
 				[bulletin setIgnoresDowntime:YES];
 				[bulletin setIgnoresQuietMode:YES];
 
-				dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), __BBServerQueue, ^{
+				dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), __BBServerQueue, ^{
 					[sharedServer publishBulletin:bulletin destinations:14];
 				});
 			}
@@ -475,7 +475,7 @@ static BOOL readdedNotifications = false;
         [bulletin setIgnoresQuietMode:YES];
 		bulletinDictionary[self.bundleIdentifier] = bulletin;
 
-		dispatch_sync(__BBServerQueue, ^{
+		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), __BBServerQueue, ^{
 			[sharedServer publishBulletin:bulletin destinations:4];
 		});
 
