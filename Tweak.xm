@@ -75,9 +75,12 @@ extern dispatch_queue_t __BBServerQueue;
 @property (nonatomic,readonly) NSString * displayName;
 @end
 
-@interface SBApplicationController : NSObject
-@property(class, readonly) SBApplicationController *sharedInstance;
--(SBApplication*)applicationWithBundleIdentifier:(NSString*)identifier;
+@interface SBApplicationController : NSObject {
+	NSMutableDictionary* _applicationsByBundleIdentifer;
+}
++(id)sharedInstance;
+-(id)applicationWithBundleIdentifier:(id)arg1 ;
+-(void)uninstallApplication:(id)arg1 ;
 @end
 
 @interface SBIconProgressView : UIView
@@ -309,10 +312,46 @@ static BOOL readdedNotifications = false;
 -(instancetype)_initWithApplicationProxy:(id)proxy{
 	FBSApplicationPlaceholder *instance = %orig;
 
+    [self addObserver:instance forKeyPath:@"prioritizable" options:NSKeyValueObservingOptionNew context:nil];
+    [self addObserver:instance forKeyPath:@"pausable" options:NSKeyValueObservingOptionNew context:nil];
+    [self addObserver:instance forKeyPath:@"cancellable" options:NSKeyValueObservingOptionNew context:nil];
 	[[NSNotificationCenter defaultCenter] addObserver:instance selector:@selector(installsStarted:) name:@"installsStarted" object:nil];
 	[[NSNotificationCenter defaultCenter] addObserver:instance selector:@selector(installsFinished:) name:@"installsFinished" object:nil];
 
 	return instance;
+}
+
+%new
+-(void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+	BOOL newKey = [change objectForKey:NSKeyValueChangeNewKey];
+	if (!newKey) {
+		NSArray<NSString*> *identifiersToRemove;
+		if ([keyPath isEqualToString:@"prioritizable"]) identifiersToRemove = @[@"prioritize_app_action"];
+		else if ([keyPath isEqualToString:@"pausable"]) identifiersToRemove = @[@"pause_app_action", @"resume_app_action"];
+		else if ([keyPath isEqualToString:@"cancellable"]) identifiersToRemove = @[@"cancel_app_action"];
+
+		BBBulletin *bulletin = bulletinDictionary[self.bundleIdentifier];
+		if(!bulletin) return;
+
+		NSMutableArray *actionsArray = bulletin.supplementaryActionsByLayout[@(0)];
+		BBAction *entryToRemove;
+		for (NSString *iden in identifiersToRemove) {
+			for (BBAction *entry in actionsArray) {
+				if ([entry.identifier isEqualToString:iden])
+					entryToRemove = entry;
+			}
+			@try {
+				[actionsArray removeObject:entryToRemove];
+			}
+			@catch (NSException *x) {}
+		}
+
+		[bulletin setTitle:@"Installing"];
+
+		dispatch_async(__BBServerQueue, ^{
+			[sharedServer publishBulletin:bulletin destinations:4];
+		});
+	}
 }
 
 -(void)_prioritizeWithResult:(id)result{
@@ -534,6 +573,18 @@ static BOOL readdedNotifications = false;
 		[defaultAction setShouldDismissBulletin:YES];
 		[bulletin setDefaultAction:defaultAction];
 
+		NSMutableDictionary *supplementaryActions = [NSMutableDictionary new];
+		NSMutableArray *supplementaryActionsArray = [NSMutableArray new];
+
+		BBAction *uninstallAction = [BBAction actionWithIdentifier:@"uninstall_app_action" title:@"Uninstall"];
+		[uninstallAction setActionType:2];
+		[uninstallAction setCanBypassPinLock:YES];
+		[uninstallAction setShouldDismissBulletin:YES];
+		[supplementaryActionsArray addObject:uninstallAction];
+
+		[supplementaryActions setObject:supplementaryActionsArray forKey:@(0)];
+		[bulletin setSupplementaryActionsByLayout:supplementaryActions];
+
         [bulletin setIgnoresDowntime:YES];
         [bulletin setIgnoresQuietMode:YES];
 
@@ -564,16 +615,29 @@ static BOOL readdedNotifications = false;
 	FBSApplicationPlaceholderProgress *prog = progressDictionary[req.threadIdentifier];
 	if ([action.identifier isEqualToString:@"prioritize_app_action"]) {
 		[prog.placeholder prioritize];
-		[[NSNotificationCenter defaultCenter] postNotificationName:@"exitLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
+		NSString *bundleId = [req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1];
+		[[NSNotificationCenter defaultCenter] postNotificationName:@"exitLongLook" object:nil userInfo:@{@"identifiers": @[bundleId]}];
 	} else if ([action.identifier isEqualToString:@"pause_app_action"]) {
 		[prog.placeholder pause];
-		[[NSNotificationCenter defaultCenter] postNotificationName:@"exitLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
+		NSString *bundleId = [req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1];
+		[[NSNotificationCenter defaultCenter] postNotificationName:@"exitLongLook" object:nil userInfo:@{@"identifiers": @[bundleId]}];
 	} else if ([action.identifier isEqualToString:@"resume_app_action"]) {
 		[prog.placeholder resume];
-		[[NSNotificationCenter defaultCenter] postNotificationName:@"exitLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
+		NSString *bundleId = [req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1];
+		[[NSNotificationCenter defaultCenter] postNotificationName:@"exitLongLook" object:nil userInfo:@{@"identifiers": @[bundleId]}];
 	} else if ([action.identifier isEqualToString:@"cancel_app_action"]) {
 		[prog.placeholder cancel];
-		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[[req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]}];
+		NSString *bundleId = [req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1];
+		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[bundleId]}];
+	} else if ([action.identifier isEqualToString:@"uninstall_app_action"]) {
+		SBApplicationController *controller = [%c(SBApplicationController) sharedInstance];
+		NSString *bundleId = [req.bulletin.publisherBulletinID substringFromIndex:[req.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1];
+		SBApplication *app = [controller applicationWithBundleIdentifier:bundleId];
+		[controller uninstallApplication:app];
+		[[NSNotificationCenter defaultCenter] postNotificationName:@"dismissLongLook" object:nil userInfo:@{@"identifiers": @[bundleId]}];
+		if(req.bulletin.bulletinID) dispatch_async(__BBServerQueue, ^{
+			[sharedServer _clearBulletinIDs:@[req.bulletin.bulletinID] forSectionID:req.bulletin.sectionID shouldSync:YES];
+		});
 	} else {
 		%orig;
 	}
@@ -686,12 +750,7 @@ static BOOL readdedNotifications = false;
 %hook NCNotificationShortLookViewController
 %property(nonatomic, strong) UIProgressView *progressView;
 %property(nonatomic, strong) UIView *progressContainerView;
-%property(readonly) NSString *bundleId;
 //%property(nonatomic, strong) UILabel *additionalLabel;
-
--(NSString*)bundleId {
-	return [NSString stringWithFormat:@"%@", [self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
-}
 
 -(void)viewWillAppear:(BOOL)animated{
 	%orig;
@@ -760,12 +819,7 @@ static BOOL readdedNotifications = false;
 %hook NCNotificationLongLookViewController
 %property(nonatomic, strong) UIProgressView *progressView;
 %property(nonatomic, strong) UIView *progressContainerView;
-%property(readonly) NSString *bundleId;
 //%property(nonatomic, strong) UILabel *additionalLabel;
-
--(NSString*)bundleId {
-	return [NSString stringWithFormat:@"%@", [self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]];
-}
 
 -(void)viewDidLoad{
 	%orig;
@@ -784,16 +838,16 @@ static BOOL readdedNotifications = false;
 
 %new
 -(void)exitWithNotification:(NSNotification*)notification{
-	if([notification.userInfo[@"identifiers"] containsObject:self.bundleId]){
+	if([notification.userInfo[@"identifiers"] containsObject:[NSString stringWithFormat:@"%@", [self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]]){
 		[self customContentRequestsDismiss:NULL];
 	}
 }
 
 %new
 -(void)dismissWithNotification:(NSNotification*)notification{
-	if([notification.userInfo[@"identifiers"] containsObject:self.bundleId]){
+	if([notification.userInfo[@"identifiers"] containsObject:[NSString stringWithFormat:@"%@", [self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]]){
 		[self dismissViewControllerAnimated:YES completion:^{
-			[bulletinDictionary removeObjectForKey:self.bundleId];
+			[bulletinDictionary removeObjectForKey:[NSString stringWithFormat:@"%@", [self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]];
 		}];
 	}
 }
@@ -808,7 +862,7 @@ static BOOL readdedNotifications = false;
 		//self.additionalLabel = [[UILabel alloc] init];
 	}
 	
-	self.progressView.observedProgress = MSHookIvar<NSProgress*>(progressDictionary[self.bundleId], "_progress");
+	self.progressView.observedProgress = MSHookIvar<NSProgress*>(progressDictionary[[NSString stringWithFormat:@"%@", [self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]], "_progress");
 	if(self.progressView.observedProgress == nil) self.progressView.progress = 1;
 
 	NCNotificationContentView *content = MSHookIvar<NCNotificationContentView*>(MSHookIvar<NCNotificationLongLookView*>(self, "_lookView"), "_notificationContentView");
