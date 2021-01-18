@@ -246,9 +246,15 @@ static BOOL readdedNotifications = false;
 				[active removeObject:identifier];
 				[finished addObject:identifier];
 			}
-
-			for(NSString *identifier in finished){
+			
+			NSMutableArray *finishedCopy = finished.mutableCopy;
+			for(NSString *identifier in finishedCopy){
 				SBApplication *app = [[%c(SBApplicationController) sharedInstance] applicationWithBundleIdentifier:identifier];
+
+				if(!app){
+					[finished removeObject:identifier];
+					continue;
+				}
 
 				__block BBBulletin *bulletin = [[BBBulletin alloc] init];
 				[bulletin setHeader:app.displayName];
@@ -273,7 +279,7 @@ static BOOL readdedNotifications = false;
 
 				[bulletin setBulletinID:bulletinUUID];
 				[bulletin setRecordID:bulletinUUID];
-				[bulletin setThreadID:app.bundleIdentifier];
+				[bulletin setThreadID:identifier];
 				[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14-completed/%@", app.bundleIdentifier]];
 				[bulletin setDate:[NSDate date]];
 				[bulletin setLockScreenPriority:1];
