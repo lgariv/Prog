@@ -508,7 +508,7 @@ static BOOL readdedNotifications = false;
 		BBBulletin *bulletin = [[BBBulletin alloc] init];
 		[bulletin setHeader:self.displayName];
 		[bulletin setTitle:@"Downloading"];
-		[bulletin setMessage:@"com.miwix.downloadbar14-progressbar"];
+		[bulletin setMessage:@"​"];
 
 		NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
 
