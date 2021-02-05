@@ -10,6 +10,22 @@
 @interface PLPlatterView : UIView
 @end
 
+@interface PLPlatterHeaderContentView : UIView
+@property(getter=_dateLabel) UILabel *dateLabel;
+@end
+
+#pragma mark BaseBoard & BaseBoardUI Framework
+
+@interface BSRelativeDateTimer
+-(void)fireAndSchedule;
+@end
+
+@interface BSUIRelativeDateLabel : UILabel
+@property(nonatomic, strong) NSProgress *progress;
+
+-(void)update;
+@end
+
 #pragma mark SpringBoard & SpringBoardHome Framework
 
 @interface SBApplication : NSObject
