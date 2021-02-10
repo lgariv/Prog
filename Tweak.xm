@@ -599,9 +599,35 @@ static BOOL readdedNotifications = false;
 
 #pragma mark Handling Notification Content
 
+@implementation Listener
+-(instancetype)initWithProgress:(NSProgress*)progress andLabel:(BSUIRelativeDateLabel*)label{
+	self = [super init];
+	_progress = progress;
+	_label = label;
+	[_progress addObserver:self forKeyPath:NSStringFromSelector(@selector(fractionCompleted)) options:0 context:NULL];
+	return self;
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context{
+	if([keyPath isEqualToString:@"fractionCompleted"] && [object isKindOfClass:NSProgress.class]){
+		[NSUserDefaults.standardUserDefaults setObject:[NSString stringWithFormat:@"%@", [NSString stringWithFormat:@"%d%%", (int)round(_progress.fractionCompleted * 100)]] forKey:@"DB14"];
+		if(_label) _label.progressText = [NSString stringWithFormat:@"%d%%", (int)round(_progress.fractionCompleted * 100)];
+	}
+}
+
+-(void)removeObserver{
+	[_progress removeObserver:self forKeyPath:NSStringFromSelector(@selector(fractionCompleted))];
+}
+
+-(void)dealloc{
+	[self removeObserver];
+}
+@end
+
 %hook NCNotificationShortLookViewController
 %property(nonatomic, strong) UIProgressView *progressView;
 %property(nonatomic, strong) UIView *progressContainerView;
+%property(nonatomic, strong) Listener *progressListener;
 //%property(nonatomic, strong) UILabel *additionalLabel;
 
 -(void)viewWillAppear:(BOOL)animated{
@@ -622,9 +648,10 @@ static BOOL readdedNotifications = false;
 		//self.additionalLabel = [[UILabel alloc] init];
 	}
 	
-	self.progressView.observedProgress = MSHookIvar<NSProgress*>(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress");
-	if(self.progressView.observedProgress == nil) self.progressView.progress = 1;
-
+	NSProgress *progress = MSHookIvar<NSProgress*>(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress");
+	if(progress) self.progressView.observedProgress = progress;
+	else self.progressView.progress = 1;
+	
 	NCNotificationContentView *content = ((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView;
 	UILabel *label = content.secondaryLabel;
 	label.hidden = true;
@@ -648,7 +675,14 @@ static BOOL readdedNotifications = false;
 	[self.progressView.centerYAnchor constraintEqualToAnchor:self.progressContainerView.centerYAnchor].active = true;
 	[self.progressView.leadingAnchor constraintEqualToAnchor:self.progressContainerView.leadingAnchor].active = true;
 	[self.progressView.trailingAnchor constraintEqualToAnchor:self.progressContainerView.trailingAnchor].active = true;
-
+	
+	UILabel *dateLabel = MSHookIvar<PLPlatterHeaderContentView*>(((NCNotificationViewControllerView*)self.view).contentView, "_headerContentView").dateLabel;
+	if([dateLabel isKindOfClass:%c(BSUIRelativeDateLabel)] && progress) {
+		self.progressListener = [[Listener alloc] initWithProgress:progress andLabel:(BSUIRelativeDateLabel*)dateLabel];
+		((BSUIRelativeDateLabel*)dateLabel).progressText = [NSString stringWithFormat:@"%d%%", (int)round(progress.fractionCompleted * 100)];
+		((BSUIRelativeDateLabel*)dateLabel).locked = true;
+	}
+	
 	/*[self.additionalLabel removeFromSuperview];
 	self.additionalLabel.translatesAutoresizingMaskIntoConstraints = false;
 	[content addSubview:self.additionalLabel];
@@ -665,6 +699,9 @@ static BOOL readdedNotifications = false;
 	[self.progressContainerView removeFromSuperview];
 	//[self.additionalLabel removeFromSuperview];
 	((NCNotificationShortLookView*)((NCNotificationViewControllerView*)self.view).contentView).notificationContentView.secondaryLabel.hidden = false;
+	
+	UILabel *dateLabel = MSHookIvar<PLPlatterHeaderContentView*>(((NCNotificationViewControllerView*)self.view).contentView, "_headerContentView").dateLabel;
+	if(dateLabel && [dateLabel isKindOfClass:%c(BSUIRelativeDateLabel)]) ((BSUIRelativeDateLabel*)dateLabel).locked = false;
 }
 %end
 
@@ -714,8 +751,9 @@ static BOOL readdedNotifications = false;
 		//self.additionalLabel = [[UILabel alloc] init];
 	}
 	
-	self.progressView.observedProgress = MSHookIvar<NSProgress*>(progressDictionary[[NSString stringWithFormat:@"%@", [self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]]], "_progress");
-	if(self.progressView.observedProgress == nil) self.progressView.progress = 1;
+	NSProgress *progress = MSHookIvar<NSProgress*>(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress");
+	if(progress) self.progressView.observedProgress = progress;
+	else self.progressView.progress = 1;
 
 	NCNotificationContentView *content = MSHookIvar<NCNotificationContentView*>(MSHookIvar<NCNotificationLongLookView*>(self, "_lookView"), "_notificationContentView");
 	UITextView *label = content.secondaryTextView;
@@ -787,5 +825,30 @@ static BOOL readdedNotifications = false;
 	} else{
 		[self.contentViewController resetContent];
 	}
+}
+%end
+
+%hook BSUIRelativeDateLabel
+%property(nonatomic) BOOL locked;
+%property(nonatomic, strong) NSString *progressText;
+
+-(void)update{
+	%orig;
+	[MSHookIvar<BSRelativeDateTimer*>(self, "_relativeDateTimer") fireAndSchedule];
+}
+
+-(void)setLocked:(BOOL)locked{
+	%orig;
+	[self update];
+}
+
+-(void)setProgressText:(NSString*)text{
+	%orig;
+	[self update];
+}
+
+-(id)constructLabelString{
+	if(!self.locked) return %orig;
+	else return self.progressText;
 }
 %end

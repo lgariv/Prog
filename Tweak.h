@@ -1,4 +1,5 @@
 #pragma mark Public Frameworks
+
 #import <UIKit/UIKit.h>
 
 @interface UIImage(Private)
@@ -8,6 +9,31 @@
 #pragma mark PlatterKit Framework
 
 @interface PLPlatterView : UIView
+@end
+
+@interface PLPlatterHeaderContentView : UIView
+@property(getter=_dateLabel) UILabel *dateLabel;
+@end
+
+#pragma mark BaseBoard & BaseBoardUI Framework
+
+@interface BSRelativeDateTimer
+-(void)fireAndSchedule;
+@end
+
+@interface BSUIRelativeDateLabel : UILabel
+@property(nonatomic) BOOL locked;
+@property(nonatomic, strong) NSString *progressText;
+
+-(void)update;
+@end
+
+#pragma mark Own Classes
+
+@interface Listener : NSObject{
+	NSProgress *_progress;
+	__weak BSUIRelativeDateLabel *_label;
+}
 @end
 
 #pragma mark SpringBoard & SpringBoardHome Framework
@@ -141,6 +167,7 @@
 @property NCNotificationRequest *notificationRequest;
 @property(nonatomic, strong) UIProgressView *progressView;
 @property(nonatomic, strong) UIView *progressContainerView;
+@property(nonatomic, strong) Listener *progressListener;
 //@property(nonatomic, strong) UILabel *additionalLabel;
 -(void)customContentRequestsDismiss:(id)content;
 -(void)setupContent;
