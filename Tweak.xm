@@ -600,11 +600,15 @@ static BOOL readdedNotifications = false;
 #pragma mark Handling Notification Content
 
 @implementation Listener
--(instancetype)initWithProgress:(NSProgress*)progress andLabel:(BSUIRelativeDateLabel*)label{
+-(instancetype)initWithProgress:(NSProgress*)progress andLabel:(BSUIRelativeDateLabel*)label andBundleID:(NSString*)bundleID{
 	self = [super init];
 	_progress = progress;
 	_label = label;
-	[_progress addObserver:self forKeyPath:NSStringFromSelector(@selector(fractionCompleted)) options:0 context:NULL];
+	_bundleID = bundleID;
+	
+	[_progress addObserver:self forKeyPath:NSStringFromSelector(@selector(fractionCompleted)) options:NSKeyValueObservingOptionInitial context:NULL];
+	[_progress addObserver:self forKeyPath:NSStringFromSelector(@selector(installPhase)) options:NSKeyValueObservingOptionInitial context:NULL];
+	
 	return self;
 }
 
@@ -612,11 +616,40 @@ static BOOL readdedNotifications = false;
 	if([keyPath isEqualToString:@"fractionCompleted"] && [object isKindOfClass:NSProgress.class]){
 		[NSUserDefaults.standardUserDefaults setObject:[NSString stringWithFormat:@"%@", [NSString stringWithFormat:@"%d%%", (int)round(_progress.fractionCompleted * 100)]] forKey:@"DB14"];
 		if(_label) _label.progressText = [NSString stringWithFormat:@"%d%%", (int)round(_progress.fractionCompleted * 100)];
+	} else if([keyPath isEqualToString:@"installPhase"] && [object isKindOfClass:NSProgress.class]){
+		BBBulletin *bulletin = bulletinDictionary[_bundleID];
+		if(!bulletin) return;
+
+		NSMutableArray *actionsArray = [bulletin.supplementaryActionsByLayout[@0] mutableCopy];
+		
+		if(((NSProgress*)object).installPhase == 0){
+			[bulletin setTitle:@"Downloading"];
+		} else if(((NSProgress*)object).installPhase == 1){
+			[bulletin setTitle:@"Installing"];
+			
+			for (int i = 0; i < actionsArray.count; i++) {
+				BBAction *entry = actionsArray[i];
+				
+				if ([entry.identifier isEqualToString:@"pause_app_action"] || [entry.identifier isEqualToString:@"resume_app_action"]){
+					@try {
+						[actionsArray removeObject:entry];
+						i--;
+					} @catch (NSException *x) {}
+				}
+			}
+		}
+		
+		[bulletin setSupplementaryActionsByLayout:[@{@0 : actionsArray} mutableCopy]];
+		
+		dispatch_async(__BBServerQueue, ^{
+			[sharedServer publishBulletin:bulletin destinations:4];
+		});
 	}
 }
 
 -(void)removeObserver{
 	[_progress removeObserver:self forKeyPath:NSStringFromSelector(@selector(fractionCompleted))];
+	[_progress removeObserver:self forKeyPath:NSStringFromSelector(@selector(installPhase))];
 }
 
 -(void)dealloc{
@@ -648,7 +681,8 @@ static BOOL readdedNotifications = false;
 		//self.additionalLabel = [[UILabel alloc] init];
 	}
 	
-	NSProgress *progress = MSHookIvar<NSProgress*>(progressDictionary[[self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1]], "_progress");
+	NSString *bundleID = [self.notificationRequest.bulletin.publisherBulletinID substringFromIndex:[self.notificationRequest.bulletin.publisherBulletinID rangeOfString:@"/"].location + 1];
+	NSProgress *progress = MSHookIvar<NSProgress*>(progressDictionary[bundleID], "_progress");
 	if(progress) self.progressView.observedProgress = progress;
 	else self.progressView.progress = 1;
 	
@@ -678,7 +712,7 @@ static BOOL readdedNotifications = false;
 	
 	UILabel *dateLabel = MSHookIvar<PLPlatterHeaderContentView*>(((NCNotificationViewControllerView*)self.view).contentView, "_headerContentView").dateLabel;
 	if([dateLabel isKindOfClass:%c(BSUIRelativeDateLabel)] && progress) {
-		self.progressListener = [[Listener alloc] initWithProgress:progress andLabel:(BSUIRelativeDateLabel*)dateLabel];
+		self.progressListener = [[Listener alloc] initWithProgress:progress andLabel:(BSUIRelativeDateLabel*)dateLabel andBundleID:bundleID];
 		((BSUIRelativeDateLabel*)dateLabel).progressText = [NSString stringWithFormat:@"%d%%", (int)round(progress.fractionCompleted * 100)];
 		((BSUIRelativeDateLabel*)dateLabel).locked = true;
 	}

@@ -6,6 +6,10 @@
 +(instancetype)_applicationIconImageForBundleIdentifier:(NSString*)bundleId format:(int)format;
 @end
 
+@interface NSProgress(Private)
+@property(readonly) NSUInteger installPhase;
+@end
+
 #pragma mark PlatterKit Framework
 
 @interface PLPlatterView : UIView
@@ -33,6 +37,7 @@
 @interface Listener : NSObject{
 	NSProgress *_progress;
 	__weak BSUIRelativeDateLabel *_label;
+	NSString *_bundleID;
 }
 @end
 
