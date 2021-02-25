@@ -6,7 +6,7 @@ include $(THEOS)/makefiles/common.mk
 export FINALPACKAGE = 1
 DEBUG = 0
 export ARCHS = arm64 arm64e
-export TARGET = iphone:clang:13.5:12.2
+export TARGET = iphone:clang:13.5:11.4
 
 TWEAK_NAME = Prog
 
