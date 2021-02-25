@@ -5,10 +5,17 @@
 @implementation SButton
 @end
 
+%hook CSCoverSheetViewController
+-(void)viewDidDisappear:(BOOL)arg1 {
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"com.miwix.prog.donate" object:nil userInfo:nil];
+    %orig;
+}
+%end
+
 %hook SpringBoard
 - (void)applicationDidFinishLaunching:(id)application {
     %orig;
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(showDonateController:) name:@"com.miwix.selenium.donate" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(showDonateController:) name:@"com.miwix.prog.donate" object:nil];
 }
 
 %new
@@ -90,13 +97,11 @@
     SButton *senderFix = sender;
     [senderFix.controllerToDismiss dismissViewControllerAnimated:YES completion:nil];
     [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=DSAQ8SXMGFUNU&source=url"]];
-    [[NSNotificationCenter defaultCenter] postNotificationName:@"com.miwix.selenium.resume.home" object:nil userInfo:nil];
 }
 
 %new
 -(void)buttonDismiss:(UIButton *)sender {
     SButton *senderFix = sender;
     [senderFix.controllerToDismiss dismissViewControllerAnimated:YES completion:nil];
-    [[NSNotificationCenter defaultCenter] postNotificationName:@"com.miwix.selenium.resume.home" object:nil userInfo:nil];
 }
 %end
