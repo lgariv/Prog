@@ -622,10 +622,14 @@ static BOOL readdedNotifications = false;
 
 		NSMutableArray *actionsArray = [bulletin.supplementaryActionsByLayout[@0] mutableCopy];
 		
+		BOOL updating = (BOOL)[[%c(SBApplicationController) sharedInstance] applicationWithBundleIdentifier:_bundleID];
+		
 		if(((NSProgress*)object).installPhase == 0){
-			[bulletin setTitle:@"Downloading"];
+			if(!updating) [bulletin setTitle:@"Downloading"];
+			else [bulletin setTitle:@"Downloading Update"];
 		} else if(((NSProgress*)object).installPhase == 1){
-			[bulletin setTitle:@"Installing"];
+			if(!updating) [bulletin setTitle:@"Installing"];
+			else [bulletin setTitle:@"Updating"];
 			
 			for (int i = 0; i < actionsArray.count; i++) {
 				BBAction *entry = actionsArray[i];
