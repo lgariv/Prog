@@ -21,6 +21,7 @@
 %new
 - (void)showDonateController:(NSNotification *)notification {
     static dispatch_once_t progOnceToken;
+    [[NSUserDefaults standardUserDefaults] setValue:@"YES" forKey:@"progFirstTime"];
     dispatch_once(&progOnceToken, ^{
         if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"progFirstTime"] isEqualToString:@"YES"] || [[NSUserDefaults standardUserDefaults] objectForKey:@"progFirstTime"] == nil) {
             [[NSUserDefaults standardUserDefaults] setValue:@"NO" forKey:@"progFirstTime"];
