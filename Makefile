@@ -1,18 +1,18 @@
 INSTALL_TARGET_PROCESSES = SpringBoard
 include $(THEOS)/makefiles/common.mk
 
-#export GO_EASY_ON_ME = 1
+# export GO_EASY_ON_ME = 1
 
 export FINALPACKAGE = 1
 DEBUG = 0
 export ARCHS = arm64 arm64e
 export TARGET = iphone:clang:13.5
 
-TWEAK_NAME = DownloadBar14
+TWEAK_NAME = Prog
 
-DownloadBar14_FILES = Tweak.xm
-DownloadBar14_FRAMEWORKS = Foundation UIKit QuartzCore
-DownloadBar14_PRIVATE_FRAMEWORKS = BulletinBoard FrontBoardServices
-DownloadBar14_CFLAGS = -O2 -fobjc-arc
+Prog_FILES = Tweak.xm welcome.xm
+Prog_FRAMEWORKS = Foundation UIKit QuartzCore
+Prog_PRIVATE_FRAMEWORKS = BulletinBoard FrontBoardServices
+Prog_CFLAGS = -O2 -fobjc-arc
 
 include $(THEOS_MAKE_PATH)/tweak.mk

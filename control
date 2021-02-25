@@ -1,9 +1,9 @@
-Package: com.miwix.downloadbar14
-Name: DownloadBar14
-Depends: mobilesubstrate
+Package: com.miwix.prog
+Name: Prog
+Depends: mobilesubstrate, firmware (>= 13.0)
 Version: 1.0.0
 Architecture: iphoneos-arm
-Description: Show a progress bar notification for app downloads!
-Maintainer: Lavie
-Author: shepgoba
+Description: Track and manage your downloads right from the lock screen.
+Maintainer: Lavie Gariv (@LGarivDev), RuntimeOverflow
+Author: Lavie Gariv (@LGarivDev)
 Section: Tweaks
