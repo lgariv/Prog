@@ -1,14 +1,5 @@
 @interface SButton : UIButton
-@property (nonatomic,retain) NCNotificationRequest *request;    
-@property (nonatomic,retain) NCNotificationListCell *cell;    
-@property (nonatomic,retain) SBRingerPillView *pillView;    
-@property (nonatomic,retain) UILabel *pillViewUntilLabel;    
-@property (nonatomic,retain) UIDatePicker *datePicker;
-@property (nonatomic,retain) UIHoursStepper *stepper;
-@property (nonatomic,retain) NSDate *pickerDate;
-@property (nonatomic,retain) NSDate *stepperDate;
 @property (nonatomic,retain) UIViewController *controllerToDismiss;    
-@property (nonatomic,readwrite) BOOL grouped;    
 @end
 
 @implementation SButton
