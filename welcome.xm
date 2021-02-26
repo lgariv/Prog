@@ -21,10 +21,10 @@
 %new
 - (void)showDonateController:(NSNotification *)notification {
     static dispatch_once_t progOnceToken;
-    [[NSUserDefaults standardUserDefaults] setValue:@"YES" forKey:@"progFirstTime"];
+    [[NSUserDefaults standardUserDefaults] setObject:@"YES" forKey:@"progFirstTime"];
     dispatch_once(&progOnceToken, ^{
-        if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"progFirstTime"] isEqualToString:@"YES"] || [[NSUserDefaults standardUserDefaults] objectForKey:@"progFirstTime"] == nil) {
-            [[NSUserDefaults standardUserDefaults] setValue:@"NO" forKey:@"progFirstTime"];
+        if ([[[NSUserDefaults standardUserDefaults] stringForKey:@"progFirstTime"] isEqualToString:@"YES"]) {
+            [[NSUserDefaults standardUserDefaults] setObject:@"NO" forKey:@"progFirstTime"];
             UIViewController *donateController = [[UIViewController alloc] init];
             [[donateController view] setBackgroundColor:[UIColor systemBackgroundColor]];
 
