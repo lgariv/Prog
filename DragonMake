@@ -1,18 +1,19 @@
 ---
-name: DownloadBar14
+name: Prog
 icmd: killall -9 SpringBoard
 
 all:
-  archs:
-    - arm64
-    - arm64e
+    archs:
+        - arm64
+        - arm64e
 
-DownloadBar14:
-  type: tweak
-  files:
-    - "Tweak.xm"
-  frameworks:
-    - Foundation
-    - UIKit
-    - QuartzCore
-    - BulletinBoard
+Prog:
+    type: tweak
+    files:
+        - "Tweak.xm"
+        - "welcome.xm"
+    frameworks:
+        - Foundation
+        - UIKit
+        - QuartzCore
+        - BulletinBoard
