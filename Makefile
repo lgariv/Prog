@@ -7,6 +7,7 @@ export FINALPACKAGE = 1
 DEBUG = 0
 export ARCHS = arm64 arm64e
 export TARGET = iphone:clang:13.5
+export TARGET = iphone:clang:14.0:13.5 # gitignore
 
 TWEAK_NAME = DownloadBar14
 

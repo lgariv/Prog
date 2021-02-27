@@ -14,7 +14,6 @@ extern dispatch_queue_t __BBServerQueue;
 static NSMutableDictionary<NSString*, id> *progressDictionary;
 static NSMutableDictionary<NSString*, BBBulletin*> *bulletinDictionary;
 static NSMutableDictionary<NSString*, BBBulletin*> *finishedBulletinDictionary;
-static NSMutableArray<NSString*> *isUpdate;
 static BOOL readdedNotifications = false;
 
 %hook SBIconProgressView
@@ -193,8 +192,6 @@ static BOOL readdedNotifications = false;
 	NSMutableArray<NSString*> *identifiers = [[NSMutableArray alloc] init];
 	for(LSApplicationProxy *proxy in installs){
 		[identifiers addObject:proxy.applicationIdentifier];
-                if ((BOOL)[[%c(SBApplicationController) sharedInstance] applicationWithBundleIdentifier:_bundleID])
-                    [isUpdate addObject:proxy.applicationIdentifier];
 	}
 
 	[[NSNotificationCenter defaultCenter] postNotificationName:@"installsStarted" object:nil userInfo:@{@"identifiers": identifiers}];
@@ -204,16 +201,11 @@ static BOOL readdedNotifications = false;
 	%orig;
 
 	NSMutableArray<NSString*> *identifiers = [[NSMutableArray alloc] init];
-        NSMutableArray<BOOL> *isUpdated = [[NSMutableArray alloc] init];
-	for(LSApplicationProxy *proxy in applications){
+	for(LSApplicationProxy *proxy in applications) {
 		[identifiers addObject:proxy.applicationIdentifier];
-                if ([isUpdate containsObject:proxy.applicationIdentifier]) {
-                    [isUpdated addObject:proxy.applicationIdentifier];
-                    [isUpdate removeObject:proxy.applicationIdentifier];
-                }
 	}
 
-	[[NSNotificationCenter defaultCenter] postNotificationName:@"installsFinished" object:nil userInfo:@{@"identifiers": identifiers, @"isUpdated": isUpdated}];
+	[[NSNotificationCenter defaultCenter] postNotificationName:@"installsFinished" object:nil userInfo:@{@"identifiers": identifiers}];
 }
 
 -(void)applicationsWillUninstall:(id)applications{
@@ -461,7 +453,6 @@ static BOOL readdedNotifications = false;
 %new
 -(void)installsFinished:(NSNotification*)notification{
 	NSArray<NSString*> *identifiers = notification.userInfo[@"identifiers"];
-        NSArray<NSString*> *isUpdated = notification.userInfo[@"isUpdated"];
 
 	if([identifiers containsObject:self.bundleIdentifier]){
 		NSMutableArray *active = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.downloadbar14/active"]).mutableCopy;
@@ -477,10 +468,7 @@ static BOOL readdedNotifications = false;
 
 		BBBulletin *bulletin = [[BBBulletin alloc] init];
 		[bulletin setHeader:self.displayName];
-		if ([isUpdated containsObject:self.bundleIdentifier])
-                    [bulletin setTitle:[NSString stringWithFormat:@"%@ Updated", self.displayName]];
-                else
-                    [bulletin setTitle:[NSString stringWithFormat:@"%@ Installed", self.displayName]];
+		[bulletin setTitle:[NSString stringWithFormat:@"%@ Installed", self.displayName]];
 		[bulletin setMessage:@"Tap to open"];
 
 		NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
@@ -511,7 +499,6 @@ static BOOL readdedNotifications = false;
 		[defaultAction setShouldDismissBulletin:YES];
 		[bulletin setDefaultAction:defaultAction];
 
-                if ([isUpdated containsObject:self.bundleIdentifier]) {
 		NSMutableDictionary *supplementaryActions = [NSMutableDictionary new];
 		NSMutableArray *supplementaryActionsArray = [NSMutableArray new];
 
@@ -523,7 +510,6 @@ static BOOL readdedNotifications = false;
 
 		[supplementaryActions setObject:supplementaryActionsArray forKey:@(0)];
 		[bulletin setSupplementaryActionsByLayout:supplementaryActions];
-                }
 
         [bulletin setIgnoresDowntime:YES];
         [bulletin setIgnoresQuietMode:YES];
