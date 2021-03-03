@@ -17,6 +17,7 @@ jobs:
               uses: actions/checkout@master
 
             - name: Install Dependencies
+              if: steps.cache-dependencies.outputs.cache-hit != 'true'
               run: |
                   brew install ldid xz
                   brew update
@@ -25,6 +26,7 @@ jobs:
                   brew cleanup
 
             - name: Setup Theos
+              if: steps.cache-dependencies.outputs.cache-hit != 'true'
               uses: actions/checkout@master
               with:
                   repository: lgariv/theos
@@ -33,13 +35,27 @@ jobs:
                   submodules: recursive
 
             - name: Update Make
+              if: steps.cache-dependencies.outputs.cache-hit != 'true'
               run: |
                   brew install make
                   PATH="/usr/local/opt/make/libexec/gnubin:$PATH"
 
             - name: Update Theos
+              if: steps.cache-dependencies.outputs.cache-hit != 'true'
               run: |
                   make update-theos
+
+            - name: Cache multiple paths
+              id: cache-dependencies
+              uses: actions/cache@v2
+              with:
+                  path: |
+                      theos
+                      /usr/local/Cellar/
+                      /usr/local/opt/
+                  key: ${{ runner.os }}-test1-${{ steps.get-date.outputs.date }}
+                  restore-keys: |
+                      ${{ runner.os }}-test1
 
             - name: Build Package
               id: build_package
