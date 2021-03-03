@@ -1,3 +1,6 @@
+@import UIKit;
+@import Foundation;
+
 @interface SButton : UIButton
 @property (nonatomic,retain) UIViewController *controllerToDismiss;    
 @end
@@ -21,10 +24,24 @@
 %new
 - (void)showDonateController:(NSNotification *)notification {
     static dispatch_once_t progOnceToken;
-    [[NSUserDefaults standardUserDefaults] setObject:@"YES" forKey:@"progFirstTime"];
+    // [[NSUserDefaults standardUserDefaults] setObject:@"YES" forKey:@"progFirstTime"];
     dispatch_once(&progOnceToken, ^{
-        if ([[[NSUserDefaults standardUserDefaults] stringForKey:@"progFirstTime"] isEqualToString:@"YES"]) {
-            [[NSUserDefaults standardUserDefaults] setObject:@"NO" forKey:@"progFirstTime"];
+        // NSString *valueForMyKey;
+        // @try {
+        //     valueForMyKey = [[NSUserDefaults standardUserDefaults] stringForKey:@"progFirstTime"];
+        //     NSLog(@"[Prog] valueForMyKey:%@", valueForMyKey);
+        //     // if ([valueForMyKey isEqualToString:@"NO"]) {
+        //         [[NSUserDefaults standardUserDefaults] setObject:@"YES" forKey:@"progFirstTime"];
+        //     // }
+        // }
+        // @catch ( NSException *exception ) {
+        //     if (exception) {
+        //         NSLog(@"[Prog] ERROR:%@", exception);
+        //     }
+        //     valueForMyKey = @"YES";
+        // }
+        // if ([valueForMyKey isEqualToString:@"YES"]) {
+        //     [[NSUserDefaults standardUserDefaults] setObject:@"NO" forKey:@"progFirstTime"];
             UIViewController *donateController = [[UIViewController alloc] init];
             [[donateController view] setBackgroundColor:[UIColor systemBackgroundColor]];
 
@@ -39,8 +56,8 @@
             UIImageView *iconImageView = [[UIImageView alloc] initWithImage:iconImage];
             [iconImageView setFrame:CGRectMake(0, 0, 100.0f, 100.0f)];
             [iconImageView setTranslatesAutoresizingMaskIntoConstraints:YES];
-            [iconImageView.widthAnchor constraintEqualToAnchor:nil constant:[[UIScreen mainScreen] bounds].size.width/4.0f].active = YES;
-            [iconImageView.heightAnchor constraintEqualToAnchor:nil constant:[[UIScreen mainScreen] bounds].size.width/4.0f].active = YES;
+            // [iconImageView.widthAnchor constraintEqualToAnchor:nil constant:[[UIScreen mainScreen] bounds].size.width/4.0f].active = YES;
+            // [iconImageView.heightAnchor constraintEqualToAnchor:nil constant:[[UIScreen mainScreen] bounds].size.width/4.0f].active = YES;
 
             UILabel *textLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 100.0f, 100.0f)];
             NSMutableAttributedString *attributedText = [[NSMutableAttributedString alloc] initWithString:@"Thank you for installing Prog!\n We hope you'll enjoy it😁\n\n Prog has been in the works for 2 months, and is inspired by the r/Jailbreak community.\n\n If you appreciate our work, please consider making a small donation."];
@@ -55,8 +72,8 @@
             SButton *donateButton = [SButton buttonWithType:UIButtonTypeSystem];
             [donateButton setFrame:CGRectMake(0, 0, 250.0f, 50.0f)]; // Notch Series
             [donateButton setTranslatesAutoresizingMaskIntoConstraints:NO];
-            [donateButton.widthAnchor constraintEqualToAnchor:nil constant:[[UIScreen mainScreen] bounds].size.width/1.5f].active = YES;
-            [donateButton.heightAnchor constraintEqualToAnchor:nil constant:([[UIScreen mainScreen] bounds].size.width/1.5f)/5.0f].active = YES;
+            // [donateButton.widthAnchor constraintEqualToAnchor:nil constant:[[UIScreen mainScreen] bounds].size.width/1.5f].active = YES;
+            // [donateButton.heightAnchor constraintEqualToAnchor:nil constant:([[UIScreen mainScreen] bounds].size.width/1.5f)/5.0f].active = YES;
             [donateButton setTitle:@"Donate" forState:UIControlStateNormal];
             [donateButton setBackgroundColor:[UIColor colorWithRed:254.0f/255.0f green:197.0f/255.0f blue:48.0f/255.0f alpha:1.0f]];
             [[donateButton titleLabel] setFont:[UIFont systemFontOfSize:19]];
@@ -82,14 +99,14 @@
             [stackView.centerYAnchor constraintEqualToAnchor:[donateController view].centerYAnchor constant:-10.0f].active = YES;
             [stackView.widthAnchor constraintEqualToAnchor:[donateController view].widthAnchor constant:[[UIScreen mainScreen] bounds].size.width/1.15f].active = YES;
             [textLabel setTranslatesAutoresizingMaskIntoConstraints:NO];
-            [textLabel.widthAnchor constraintEqualToAnchor:nil constant:[[UIScreen mainScreen] bounds].size.width/1.3f].active = YES;
+            // [textLabel.widthAnchor constraintEqualToAnchor:nil constant:[[UIScreen mainScreen] bounds].size.width/1.3f].active = YES;
             [closeButton setTranslatesAutoresizingMaskIntoConstraints:NO];
             [closeButton.topAnchor constraintEqualToAnchor:[donateController view].topAnchor constant:10.0f].active = YES;
             [closeButton.trailingAnchor constraintEqualToAnchor:[donateController view].trailingAnchor constant:-10.0f].active = YES;
 
             [[UIApplication sharedApplication].keyWindow.rootViewController presentViewController:donateController animated:YES completion:nil];
             donateController.modalInPopover = YES;
-        }
+        // }
     });
 }
 

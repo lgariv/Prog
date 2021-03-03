@@ -1,5 +1,6 @@
 #pragma mark Public Frameworks
 
+@import UIKit;
 #import <UIKit/UIKit.h>
 
 @interface UIImage(Private)

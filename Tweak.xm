@@ -99,11 +99,11 @@ static BOOL readdedNotifications = false;
 		readdedNotifications = true;
 
 		dispatch_async(dispatch_get_main_queue(), ^{
-			NSMutableArray *active = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.downloadbar14/active"]).mutableCopy;
+			NSMutableArray *active = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.Prog/active"]).mutableCopy;
 			NSMutableArray *activeApps = active.mutableCopy;
 			if(!active) active = [[NSMutableArray alloc] init];
 
-			NSMutableArray *finished = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.downloadbar14/finished"]).mutableCopy;
+			NSMutableArray *finished = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.Prog/finished"]).mutableCopy;
 			if(!finished) finished = [[NSMutableArray alloc] init];
 
 			for(FBSApplicationPlaceholder *placeholder in [self allPlaceholders]) {
@@ -135,7 +135,7 @@ static BOOL readdedNotifications = false;
 					bulletinUUID = bulletinDictionary[identifier].bulletinID;
 				}
 				@catch (NSException *x) {
-					NSLog(@"[DownloadBar] %@", x);
+					NSLog(@"[Prog] %@", x);
 				}
 
 				if(bulletinUUID) dispatch_async(__BBServerQueue, ^{
@@ -149,7 +149,7 @@ static BOOL readdedNotifications = false;
 				[bulletin setBulletinID:bulletinUUID];
 				[bulletin setRecordID:bulletinUUID];
 				[bulletin setThreadID:identifier];
-				[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14-completed/%@", identifier]];
+				[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.Prog-completed/%@", identifier]];
 				[bulletin setDate:[NSDate date]];
 				[bulletin setLockScreenPriority:1];
 
@@ -179,8 +179,8 @@ static BOOL readdedNotifications = false;
 				});
 			}
 
-			[NSUserDefaults.standardUserDefaults setObject:active forKey:@"com.miwix.downloadbar14/active"];
-			[NSUserDefaults.standardUserDefaults setObject:finished forKey:@"com.miwix.downloadbar14/finished"];
+			[NSUserDefaults.standardUserDefaults setObject:active forKey:@"com.miwix.Prog/active"];
+			[NSUserDefaults.standardUserDefaults setObject:finished forKey:@"com.miwix.Prog/finished"];
 			[NSUserDefaults.standardUserDefaults synchronize];
 		});
 	}
@@ -211,7 +211,7 @@ static BOOL readdedNotifications = false;
 -(void)applicationsWillUninstall:(id)applications{
 	%orig;
 
-	NSMutableArray *finished = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.downloadbar14/finished"]).mutableCopy;
+	NSMutableArray *finished = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.Prog/finished"]).mutableCopy;
 	if(!finished) finished = [[NSMutableArray alloc] init];
 
 	for(LSApplicationProxy *proxy in applications){
@@ -227,7 +227,7 @@ static BOOL readdedNotifications = false;
 		}
 	}
 
-	[NSUserDefaults.standardUserDefaults setObject:finished forKey:@"com.miwix.downloadbar14/finished"];
+	[NSUserDefaults.standardUserDefaults setObject:finished forKey:@"com.miwix.Prog/finished"];
 	[NSUserDefaults.standardUserDefaults synchronize];
 }
 %end
@@ -368,11 +368,11 @@ static BOOL readdedNotifications = false;
 		if(!progressDictionary) progressDictionary = [[NSMutableDictionary alloc] init];
 		if(!bulletinDictionary) bulletinDictionary = [[NSMutableDictionary alloc] init];
 
-		NSMutableArray *active = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.downloadbar14/active"]).mutableCopy;
+		NSMutableArray *active = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.Prog/active"]).mutableCopy;
 		if(!active) active = [[NSMutableArray alloc] init];
 		[active removeObject:self.bundleIdentifier];
 		[active addObject:self.bundleIdentifier];
-		[NSUserDefaults.standardUserDefaults setObject:active forKey:@"com.miwix.downloadbar14/active"];
+		[NSUserDefaults.standardUserDefaults setObject:active forKey:@"com.miwix.Prog/active"];
 		[NSUserDefaults.standardUserDefaults synchronize];
 
 		progressDictionary[self.bundleIdentifier] = (FBSApplicationPlaceholderProgress*)self.progress;
@@ -389,7 +389,7 @@ static BOOL readdedNotifications = false;
 		[bulletin setBulletinID:bulletinUUID];
 		[bulletin setRecordID:bulletinUUID];
 		[bulletin setThreadID:self.bundleIdentifier];
-		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14/%@", self.bundleIdentifier]];
+		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.Prog/%@", self.bundleIdentifier]];
 		[bulletin setDate:[NSDate date]];
 		[bulletin setLockScreenPriority:1];
 
@@ -433,7 +433,7 @@ static BOOL readdedNotifications = false;
 			[bulletin setSupplementaryActionsByLayout:supplementaryActions];
 		}
 		@catch (NSException *x) {
-			NSLog(@"[DownloadBar] %@", x);
+			NSLog(@"[Prog] %@", x);
 		}
 
         [bulletin setIgnoresDowntime:YES];
@@ -455,15 +455,15 @@ static BOOL readdedNotifications = false;
 	NSArray<NSString*> *identifiers = notification.userInfo[@"identifiers"];
 
 	if([identifiers containsObject:self.bundleIdentifier]){
-		NSMutableArray *active = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.downloadbar14/active"]).mutableCopy;
+		NSMutableArray *active = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.Prog/active"]).mutableCopy;
 		[active removeObject:self.bundleIdentifier];
-		[NSUserDefaults.standardUserDefaults setObject:active forKey:@"com.miwix.downloadbar14/active"];
+		[NSUserDefaults.standardUserDefaults setObject:active forKey:@"com.miwix.Prog/active"];
 
-		NSMutableArray *finished = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.downloadbar14/finished"]).mutableCopy;
+		NSMutableArray *finished = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.Prog/finished"]).mutableCopy;
 		if(!finished) finished = [[NSMutableArray alloc] init];
 		[finished removeObject:self.bundleIdentifier];
 		[finished addObject:self.bundleIdentifier];
-		[NSUserDefaults.standardUserDefaults setObject:finished forKey:@"com.miwix.downloadbar14/finished"];
+		[NSUserDefaults.standardUserDefaults setObject:finished forKey:@"com.miwix.Prog/finished"];
 		[NSUserDefaults.standardUserDefaults synchronize];
 
 		BBBulletin *bulletin = [[BBBulletin alloc] init];
@@ -476,7 +476,7 @@ static BOOL readdedNotifications = false;
 			bulletinUUID = bulletinDictionary[self.bundleIdentifier].bulletinID;
 		}
 		@catch (NSException *x) {
-			NSLog(@"[DownloadBar] %@", x);
+			NSLog(@"[Prog] %@", x);
 		}
 
 		if(bulletinUUID) dispatch_async(__BBServerQueue, ^{
@@ -490,7 +490,7 @@ static BOOL readdedNotifications = false;
 		[bulletin setBulletinID:bulletinUUID];
 		[bulletin setRecordID:bulletinUUID];
 		[bulletin setThreadID:self.bundleIdentifier];
-		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.downloadbar14-completed/%@", self.bundleIdentifier]];
+		[bulletin setPublisherBulletinID:[NSString stringWithFormat:@"com.miwix.Prog-completed/%@", self.bundleIdentifier]];
 		[bulletin setDate:[NSDate date]];
 		[bulletin setLockScreenPriority:1];
 
@@ -559,13 +559,13 @@ static BOOL readdedNotifications = false;
 		%orig;
 	}
 
-	if([req.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14-completed/"]){
-		NSMutableArray *finished = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.downloadbar14/finished"]).mutableCopy;
+	if([req.bulletin.publisherBulletinID hasPrefix:@"com.miwix.Prog-completed/"]){
+		NSMutableArray *finished = ((NSArray*)[NSUserDefaults.standardUserDefaults objectForKey:@"com.miwix.Prog/finished"]).mutableCopy;
 		if(!finished) finished = [[NSMutableArray alloc] init];
 
 		[finished removeObject:req.threadIdentifier];
 
-		[NSUserDefaults.standardUserDefaults setObject:finished forKey:@"com.miwix.downloadbar14/finished"];
+		[NSUserDefaults.standardUserDefaults setObject:finished forKey:@"com.miwix.Prog/finished"];
 		[NSUserDefaults.standardUserDefaults synchronize];
 	}
 }
@@ -575,7 +575,7 @@ static BOOL readdedNotifications = false;
 
 %hook BBBulletin
 -(BBSectionIcon *)sectionIcon{
-	if ([self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"] || [self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14-completed/"]) {
+	if ([self.publisherBulletinID hasPrefix:@"com.miwix.Prog/"] || [self.publisherBulletinID hasPrefix:@"com.miwix.Prog-completed/"]) {
 		UIImage *img = [UIImage _applicationIconImageForBundleIdentifier:[self.publisherBulletinID substringFromIndex:[self.publisherBulletinID rangeOfString:@"/"].location + 1] format:1];
 
 		BBSectionIconVariant *variant = [[BBSectionIconVariant alloc] init];
@@ -589,7 +589,7 @@ static BOOL readdedNotifications = false;
 }
 
 -(BOOL)allowsAutomaticRemovalFromLockScreen{
-	if ([self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"] || [self.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14-completed/"]) {
+	if ([self.publisherBulletinID hasPrefix:@"com.miwix.Prog/"] || [self.publisherBulletinID hasPrefix:@"com.miwix.Prog-completed/"]) {
 		return false;
 	}
 
@@ -670,7 +670,7 @@ static BOOL readdedNotifications = false;
 -(void)viewWillAppear:(BOOL)animated{
 	%orig;
 
-	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.Prog/"]) {
 		[self setupContent];
 	}
 }
@@ -758,7 +758,7 @@ static BOOL readdedNotifications = false;
 -(void)viewWillAppear:(BOOL)animated{
 	%orig;
 
-	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+	if ([self.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.Prog/"]) {
 		[self setupContent];
 	}
 }
@@ -838,7 +838,7 @@ static BOOL readdedNotifications = false;
 -(void)_layoutContentView{
 	%orig;
 
-	if([self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+	if([self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.Prog/"]) {
 		[self.contentViewController setupContent];
 	} else{
 		[self.contentViewController resetContent];
@@ -848,7 +848,7 @@ static BOOL readdedNotifications = false;
 -(void)didMoveToSuperview{
 	%orig;
 
-	if([self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+	if([self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.Prog/"]) {
 		[self.contentViewController setupContent];
 	} else{
 		[self.contentViewController resetContent];
@@ -858,7 +858,7 @@ static BOOL readdedNotifications = false;
 -(void)didMoveToWindow{
 	%orig;
 
-	if([self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.downloadbar14/"]) {
+	if([self.contentViewController.notificationRequest.bulletin.publisherBulletinID hasPrefix:@"com.miwix.Prog/"]) {
 		[self.contentViewController setupContent];
 	} else{
 		[self.contentViewController resetContent];
