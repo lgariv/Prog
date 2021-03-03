@@ -46,7 +46,10 @@ jobs:
             - name: Update Theos
               if: steps.cache-dependencies.outputs.cache-hit != 'true'
               run: |
+                  set +e
                   make update-theos
+                  exit 0
+                  set -e
 
             - name: Cache multiple paths
               id: cache-dependencies
