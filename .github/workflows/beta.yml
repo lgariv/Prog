@@ -22,6 +22,7 @@ jobs:
                   brew update
                   brew upgrade
                   brew doctor
+                  brew cleanup
 
             - name: Setup Theos
               uses: actions/checkout@master
