@@ -3,8 +3,8 @@ on:
     push:
         branches:
             - main
-env:
-    DEVELOPER_DIR: /Applications/Xcode_11.7.app/Contents/Developer
+# env:
+#     DEVELOPER_DIR: /Applications/Xcode_11.7.app/Contents/Developer
 jobs:
     build:
         name: Build Tweak
@@ -17,7 +17,11 @@ jobs:
               uses: actions/checkout@master
 
             - name: Install Dependencies
-              run: brew install ldid xz
+              run: |
+                  brew install ldid xz
+                  brew update
+                  brew upgrade
+                  brew doctor
 
             - name: Setup Theos
               uses: actions/checkout@master
