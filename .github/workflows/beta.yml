@@ -19,11 +19,14 @@ jobs:
             - name: Install Dependencies
               if: steps.cache-dependencies.outputs.cache-hit != 'true'
               run: |
+                  set +e
                   brew install ldid xz
                   brew update
                   brew upgrade
                   brew doctor
                   brew cleanup
+                  exit 0
+                  set -e
 
             - name: Setup Theos
               if: steps.cache-dependencies.outputs.cache-hit != 'true'
@@ -55,7 +58,7 @@ jobs:
                       /usr/local/opt/
                   key: ${{ runner.os }}-test1-${{ steps.get-date.outputs.date }}
                   restore-keys: |
-                      ${{ runner.os }}-test1
+                      ${{ runner.os }}-test1-
 
             - name: Build Package
               id: build_package
