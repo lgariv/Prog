@@ -578,6 +578,23 @@ static BOOL readdedNotifications = false;
 	if ([self.publisherBulletinID hasPrefix:@"com.miwix.Prog/"] || [self.publisherBulletinID hasPrefix:@"com.miwix.Prog-completed/"]) {
 		UIImage *img = [UIImage _applicationIconImageForBundleIdentifier:[self.publisherBulletinID substringFromIndex:[self.publisherBulletinID rangeOfString:@"/"].location + 1] format:1];
 
+              @try {
+			NSString *appInfoUrl = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@", [self.publisherBulletinID substringFromIndex:[self.publisherBulletinID rangeOfString:@"/"].location + 1]];
+
+			NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:appInfoUrl]];
+
+			NSError *e = nil;
+			NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error: &e];
+
+			NSString *artworkUrl60 = [[[jsonDict objectForKey:@"results"] objectAtIndex:0] objectForKey:@"artworkUrl60"];
+			NSURL *iconUrl = [NSURL URLWithString:artworkUrl60];
+	 	 	NSData *data = [NSData dataWithContentsOfURL:iconUrl];
+	 	 	img = [UIImage imageWithData: data];
+		}
+		@catch (NSException *x) {
+			NSLog(@"[Prog] %@", x);
+		}
+
 		BBSectionIconVariant *variant = [[BBSectionIconVariant alloc] init];
 		[variant setImageData:UIImagePNGRepresentation(img)];
 
