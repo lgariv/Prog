@@ -13,6 +13,18 @@ jobs:
             THEOS: theos
 
         steps:
+            - name: Cache multiple paths
+              id: cache-dependencies
+              uses: actions/cache@v2
+              with:
+                  path: |
+                      theos
+                      /usr/local/Cellar/
+                      /usr/local/opt/
+                  key: ${{ runner.os }}-test1-${{ steps.get-date.outputs.date }}
+                  restore-keys: |
+                      ${{ runner.os }}-test1-
+
             - name: Checkout
               uses: actions/checkout@master
 
@@ -50,18 +62,6 @@ jobs:
                   make update-theos
                   exit 0
                   set -e
-
-            - name: Cache multiple paths
-              id: cache-dependencies
-              uses: actions/cache@v2
-              with:
-                  path: |
-                      theos
-                      /usr/local/Cellar/
-                      /usr/local/opt/
-                  key: ${{ runner.os }}-test1-${{ steps.get-date.outputs.date }}
-                  restore-keys: |
-                      ${{ runner.os }}-test1-
 
             - name: Build Package
               id: build_package
