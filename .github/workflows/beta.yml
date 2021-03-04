@@ -3,8 +3,8 @@ on:
     push:
         branches:
             - test-build
-# env:
-#     DEVELOPER_DIR: /Applications/Xcode_11.7.app/Contents/Developer
+env:
+    DEVELOPER_DIR: /Applications/Xcode_11.7.app/Contents/Developer
 jobs:
     build:
         name: Build Tweak
