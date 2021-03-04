@@ -27,7 +27,6 @@ jobs:
                   key: ${{ runner.os }}-test-build-${{ steps.get-date.outputs.date }}
                   restore-keys: |
                       ${{ runner.os }}-test-build-
-                      ${{ runner.os }}-
 
             - name: Checkout
               uses: actions/checkout@master
