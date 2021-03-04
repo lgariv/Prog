@@ -5,7 +5,7 @@ on:
             - test-build
 env:
     DEVELOPER_DIR: /Applications/Xcode_11.7.app/Contents/Developer
-    SYSROOT = $(THEOS)/sdks/iPhoneOS13.5.sdk
+    SYSROOT = ~/theos/sdks/iPhoneOS13.5.sdk
 jobs:
     build:
         name: Build Tweak
@@ -19,7 +19,7 @@ jobs:
               uses: actions/cache@v2
               with:
                   path: |
-                      theos
+                      ~/theos/
                       /usr/local/Cellar/
                       /usr/local/opt/
                   key: ${{ runner.os }}-test1-${{ steps.get-date.outputs.date }}
