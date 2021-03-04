@@ -14,19 +14,19 @@ jobs:
         env:
             THEOS: theos
 
-        steps:
-            - name: Cache multiple paths
-              id: cache-dependencies
-              uses: actions/cache@v2
-              with:
-                  path: |
-                      ~/.zprofile
-                      theos/
-                      /usr/local/Cellar/
-                      /usr/local/opt/
-                  key: ${{ runner.os }}-test-build-${{ steps.get-date.outputs.date }}
-                  restore-keys: |
-                      ${{ runner.os }}-test-build-
+        #steps:
+        #    - name: Cache multiple paths
+        #      id: cache-dependencies
+        #      uses: actions/cache@v2
+        #      with:
+        #          path: |
+        #              ~/.zprofile
+        #              theos/
+        #              /usr/local/Cellar/
+        #              /usr/local/opt/
+        #          key: ${{ runner.os }}-test-build-${{ steps.get-date.outputs.date }}
+        #          restore-keys: |
+        #              ${{ runner.os }}-test-build-
 
             - name: Checkout
               uses: actions/checkout@master
