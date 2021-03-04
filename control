@@ -6,4 +6,5 @@ Architecture: iphoneos-arm
 Description: Track and manage your downloads right from the lock screen.
 Maintainer: Lavie Gariv (@LGarivDev), RuntimeOverflow
 Author: Lavie Gariv (@LGarivDev)
+Icon: https://github.com/lgariv/Prog/raw/test-build/layout/Library/Application%20Support/ProgExtra.bundle/icon.png
 Section: Tweaks
