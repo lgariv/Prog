@@ -588,8 +588,8 @@ static BOOL readdedNotifications = false;
 
 			NSString *artworkUrl60 = [[[jsonDict objectForKey:@"results"] objectAtIndex:0] objectForKey:@"artworkUrl60"];
 			NSURL *iconUrl = [NSURL URLWithString:artworkUrl60];
-	 	 	NSData *data = [NSData dataWithContentsOfURL:iconUrl];
-	 	 	img = [UIImage imageWithData: data];
+	 	 	NSData *iconData = [NSData dataWithContentsOfURL:iconUrl];
+	 	 	img = [UIImage imageWithData: iconData];
 		}
 		@catch (NSException *x) {
 			NSLog(@"[Prog] %@", x);
