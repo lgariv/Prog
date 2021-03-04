@@ -1,4 +1,4 @@
-name: Beta
+name: Beta Build
 on:
     push:
         branches:
@@ -24,9 +24,10 @@ jobs:
                       theos/
                       /usr/local/Cellar/
                       /usr/local/opt/
-                  key: ${{ runner.os }}-test1-${{ steps.get-date.outputs.date }}
+                  key: ${{ runner.os }}-test-build-${{ steps.get-date.outputs.date }}
                   restore-keys: |
-                      ${{ runner.os }}-test1-
+                      ${{ runner.os }}-test-build-
+                      ${{ runner.os }}-
 
             - name: Checkout
               uses: actions/checkout@master
@@ -69,6 +70,7 @@ jobs:
             - name: Build Package
               id: build_package
               run: |
+                  source ~/.zprofile
                   make package FINALPACKAGE=1
                   echo "::set-output name=package::$(ls -t packages | head -n1)"
                   echo "::set-output name=exit_code::$?"
