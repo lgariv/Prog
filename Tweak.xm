@@ -668,14 +668,14 @@ static BOOL readdedNotifications = false;
 	}
 }
 
-/*-(void)removeObserver{
+-(void)removeObserver{
 	[_progress removeObserver:self forKeyPath:NSStringFromSelector(@selector(fractionCompleted))];
 	[_progress removeObserver:self forKeyPath:NSStringFromSelector(@selector(installPhase))];
-}*/
-
--(void)dealloc{
-	[self removeObserver];
 }
+
+/*-(void)dealloc{
+	[self removeObserver];
+}*/
 @end
 
 %hook NCNotificationShortLookViewController
