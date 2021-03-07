@@ -4,7 +4,7 @@ Depends: mobilesubstrate, firmware (>= 13.0)
 Version: 1.0.0
 Architecture: iphoneos-arm
 Description: Track and manage your downloads right from the lock screen.
-Maintainer: Lavie Gariv (@LGarivDev), RuntimeOverflow
-Author: Lavie Gariv (@LGarivDev)
-Icon: https://github.com/lgariv/Prog/raw/test-build/layout/Library/Application%20Support/ProgExtra.bundle/icon.png
+Maintainer: Lavie Gariv, RuntimeOverflow
+Author: Lavie Gariv
+Icon: file:///Library/Application Support/ProgExtra.bundle/icon.png
 Section: Tweaks

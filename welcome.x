@@ -2,7 +2,7 @@
 @import Foundation;
 
 @interface SButton : UIButton
-@property (nonatomic,retain) UIViewController *controllerToDismiss;    
+@property (nonatomic,retain) UIViewController *controllerToDismiss;
 @end
 
 @implementation SButton
@@ -10,8 +10,8 @@
 
 %hook CSCoverSheetViewController
 -(void)viewDidDisappear:(BOOL)arg1 {
-    [[NSNotificationCenter defaultCenter] postNotificationName:@"com.miwix.prog.donate" object:nil userInfo:nil];
     %orig;
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"com.miwix.prog.donate" object:nil userInfo:nil];
 }
 %end
 
@@ -23,9 +23,9 @@
 
 %new
 - (void)showDonateController:(NSNotification *)notification {
-    static dispatch_once_t progOnceToken;
+    // static dispatch_once_t progOnceToken;
     // [[NSUserDefaults standardUserDefaults] setObject:@"YES" forKey:@"progFirstTime"];
-    dispatch_once(&progOnceToken, ^{
+    // dispatch_once(&progOnceToken, ^{
         // NSString *valueForMyKey;
         // @try {
         //     valueForMyKey = [[NSUserDefaults standardUserDefaults] stringForKey:@"progFirstTime"];
@@ -107,7 +107,7 @@
             [[UIApplication sharedApplication].keyWindow.rootViewController presentViewController:donateController animated:YES completion:nil];
             donateController.modalInPopover = YES;
         // }
-    });
+    // });
 }
 
 %new

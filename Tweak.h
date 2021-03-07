@@ -98,6 +98,7 @@
 @property (nonatomic,copy) NSString *message;
 @property (nonatomic,copy) NSString *title;
 -(void)setLockScreenPriority:(long long)arg1;
+-(void)setIcon:(BBSectionIcon *)arg1 ;
 @end
 
 @interface BBServer : NSObject

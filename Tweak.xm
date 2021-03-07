@@ -89,6 +89,8 @@ static BOOL readdedNotifications = false;
 
 #pragma mark Handling App Installation Queues, Posting Push Notifications
 
+#import "fetchAppIcon.h"
+
 %hook FBSApplicationLibrary
 -(void)_load{
 	%orig;
@@ -129,6 +131,17 @@ static BOOL readdedNotifications = false;
 				[bulletin setHeader:app.displayName];
 				[bulletin setTitle:[NSString stringWithFormat:@"%@ Installed", app.displayName]];
 				[bulletin setMessage:@"Tap to open"];
+
+				fetchAppIcon *iconFetcher = [[%c(fetchAppIcon) alloc] init];
+				UIImage *img = [iconFetcher imageWithApplicationBundleIdentifier:identifier];
+
+				BBSectionIconVariant *variant = [[BBSectionIconVariant alloc] init];
+				[variant setImageData:UIImagePNGRepresentation(img)];
+
+				BBSectionIcon *icon = [[BBSectionIcon alloc] init];
+				[icon addVariant:variant];
+
+				[bulletin setIcon:icon];
 
 				NSString *bulletinUUID = [[NSUUID UUID] UUIDString];
 				@try {
@@ -393,6 +406,17 @@ static BOOL readdedNotifications = false;
 		[bulletin setDate:[NSDate date]];
 		[bulletin setLockScreenPriority:1];
 
+		fetchAppIcon *iconFetcher = [[%c(fetchAppIcon) alloc] init];
+		UIImage *img = [iconFetcher imageWithApplicationBundleIdentifier:self.bundleIdentifier];
+
+		BBSectionIconVariant *variant = [[BBSectionIconVariant alloc] init];
+		[variant setImageData:UIImagePNGRepresentation(img)];
+
+		BBSectionIcon *icon = [[BBSectionIcon alloc] init];
+		[icon addVariant:variant];
+
+		[bulletin setIcon:icon];
+
 		@try {
 			NSString *appInfoUrl = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@", self.bundleIdentifier];
 
@@ -494,6 +518,17 @@ static BOOL readdedNotifications = false;
 		[bulletin setDate:[NSDate date]];
 		[bulletin setLockScreenPriority:1];
 
+		fetchAppIcon *iconFetcher = [[%c(fetchAppIcon) alloc] init];
+		UIImage *img = [iconFetcher imageWithApplicationBundleIdentifier:self.bundleIdentifier];
+
+		BBSectionIconVariant *variant = [[BBSectionIconVariant alloc] init];
+		[variant setImageData:UIImagePNGRepresentation(img)];
+
+		BBSectionIcon *icon = [[BBSectionIcon alloc] init];
+		[icon addVariant:variant];
+
+		[bulletin setIcon:icon];
+
 		BBAction *defaultAction = [BBAction actionWithLaunchBundleID:self.bundleIdentifier];
 		[defaultAction setCanBypassPinLock:YES];
 		[defaultAction setShouldDismissBulletin:YES];
@@ -574,26 +609,11 @@ static BOOL readdedNotifications = false;
 #pragma mark Handling Bulletin App Icon
 
 %hook BBBulletin
--(BBSectionIcon *)sectionIcon{
+/*-(BBSectionIcon *)sectionIcon{
 	if ([self.publisherBulletinID hasPrefix:@"com.miwix.Prog/"] || [self.publisherBulletinID hasPrefix:@"com.miwix.Prog-completed/"]) {
-		UIImage *img = [UIImage _applicationIconImageForBundleIdentifier:[self.publisherBulletinID substringFromIndex:[self.publisherBulletinID rangeOfString:@"/"].location + 1] format:1];
+		NSString *bundleId = [self.publisherBulletinID substringFromIndex:[self.publisherBulletinID rangeOfString:@"/"].location + 1];
 
-              @try {
-			NSString *appInfoUrl = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@", [self.publisherBulletinID substringFromIndex:[self.publisherBulletinID rangeOfString:@"/"].location + 1]];
-
-			NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:appInfoUrl]];
-
-			NSError *e = nil;
-			NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error: &e];
-
-			NSString *artworkUrl60 = [[[jsonDict objectForKey:@"results"] objectAtIndex:0] objectForKey:@"artworkUrl60"];
-			NSURL *iconUrl = [NSURL URLWithString:artworkUrl60];
-	 	 	NSData *iconData = [NSData dataWithContentsOfURL:iconUrl];
-	 	 	img = [UIImage imageWithData: iconData];
-		}
-		@catch (NSException *x) {
-			NSLog(@"[Prog] %@", x);
-		}
+		UIImage *img = [UIImage _applicationIconImageForBundleIdentifier:bundleId format:1];
 
 		BBSectionIconVariant *variant = [[BBSectionIconVariant alloc] init];
 		[variant setImageData:UIImagePNGRepresentation(img)];
@@ -603,7 +623,7 @@ static BOOL readdedNotifications = false;
 
 		return icon;
 	} else return %orig;
-}
+}*/
 
 -(BOOL)allowsAutomaticRemovalFromLockScreen{
 	if ([self.publisherBulletinID hasPrefix:@"com.miwix.Prog/"] || [self.publisherBulletinID hasPrefix:@"com.miwix.Prog-completed/"]) {
@@ -673,9 +693,9 @@ static BOOL readdedNotifications = false;
 	[_progress removeObserver:self forKeyPath:NSStringFromSelector(@selector(installPhase))];
 }
 
-/*-(void)dealloc{
+-(void)dealloc{
 	[self removeObserver];
-}*/
+}
 @end
 
 %hook NCNotificationShortLookViewController

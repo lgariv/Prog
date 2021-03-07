@@ -11,7 +11,9 @@ Prog:
     type: tweak
     files:
         - "Tweak.xm"
-        - "welcome.xm"
+        # - "welcome.x"
+    objc_files:
+        - "fetchAppIcon.m"
     frameworks:
         - Foundation
         - UIKit
