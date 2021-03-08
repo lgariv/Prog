@@ -3,47 +3,49 @@
 name: Issue Reviewed
 
 on:
-  issue_comment:
-    types: [created]
+    issue_comment:
+        types: [created]
 
 jobs:
-  issue_commented:
-    runs-on: ubuntu-latest
+    issue_commented:
+        runs-on: ubuntu-latest
 
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v2
 
-    - name: Get Contributors
-      id: contributors
-      if: ${{ !github.event.issue.pull_request }} && contains(github.event.issue.labels.*.name, 'awaiting review')
-      run: |
-        apt-get install jq -y
-        echo "::set-output name=ids::$(curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/lgariv/Prog/contributors 2>/dev/null | jq -r '.[].login')"
+            - name: Get Contributors
+              id: contributors
+              if: ${{ !github.event.issue.pull_request }} && contains(github.event.issue.labels.*.name, 'awaiting review')
+              run: |
+                  apt-get install jq -y
+                  CONTS=$(curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/lgariv/Prog/contributors 2>/dev/null | jq -r '.[].login')
+                  CONTS+=RuntimeOverflow
+                  echo "::set-output name=ids::$CONTS"
 
-    - name: Get Issue Commentter
-      id: commenter
-      if: ${{ !github.event.issue.pull_request }} && contains(github.event.issue.labels.*.name, 'awaiting review')
-      run: |
-        echo "::set-output name=username::$(curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/lgariv/Prog/issues/comments/$COMMENT_ID 2>/dev/null | jq -r '.user.login')"
-      env:
-        COMMENT_ID: ${{ github.event.comment.id }}
+            - name: Get Issue Commentter
+              id: commenter
+              if: ${{ !github.event.issue.pull_request }} && contains(github.event.issue.labels.*.name, 'awaiting review')
+              run: |
+                  echo "::set-output name=username::$(curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/lgariv/Prog/issues/comments/$COMMENT_ID 2>/dev/null | jq -r '.user.login')"
+              env:
+                  COMMENT_ID: ${{ github.event.comment.id }}
 
-    - name: Check for commentter
-      id: commenter_is_contributor
-      if: ${{ !github.event.issue.pull_request }} && contains(github.event.issue.labels.*.name, 'awaiting review')
-      run: |
-        if [[ " $CONTRIBUTORS " =~ " $COMMENT_ID " ]]; then
-          echo "::set-output name=check::1"
-        else
-          echo "::set-output name=check::0"
-        fi
-      env:
-        USERNAME: ${{ steps.commenter.outputs.username }}
-        CONTRIBUTORS: ${{ steps.contributors.outputs.ids }}
+            - name: Check for commentter
+              id: commenter_is_contributor
+              if: ${{ !github.event.issue.pull_request }} && contains(github.event.issue.labels.*.name, 'awaiting review')
+              run: |
+                  if [[ " $CONTRIBUTORS " =~ " $COMMENT_ID " ]]; then
+                    echo "::set-output name=check::1"
+                  else
+                    echo "::set-output name=check::0"
+                  fi
+              env:
+                  USERNAME: ${{ steps.commenter.outputs.username }}
+                  CONTRIBUTORS: ${{ steps.contributors.outputs.ids }}
 
-    - name: Remove 'awaiting review' Label
-      uses: actions-ecosystem/action-remove-labels@v1
-      if: ${{ !github.event.issue.pull_request }} && contains(github.event.issue.labels.*.name, 'awaiting review') && ${{ steps.commenter_is_contributor.outputs.check == 1 }}
-      with:
-        labels: awaiting review
+            - name: Remove 'awaiting review' Label
+              uses: actions-ecosystem/action-remove-labels@v1
+              if: ${{ !github.event.issue.pull_request }} && contains(github.event.issue.labels.*.name, 'awaiting review') && ${{ steps.commenter_is_contributor.outputs.check == 1 }}
+              with:
+                  labels: awaiting review
