@@ -34,24 +34,24 @@
             CIImage *cim = [self.image CIImage];
             if (cim == nil && cgref == NULL) {} else return img;
         }
-        @try {
-            NSString *appInfoUrl = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@", bundleId];
+        // @try {
+        //     NSString *appInfoUrl = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@", bundleId];
 
-            NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:appInfoUrl]];
+        //     NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:appInfoUrl]];
 
-            NSError *e = nil;
-            NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error: &e];
+        //     NSError *e = nil;
+        //     NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error: &e];
 
-            NSString *artworkUrl60 = [[[jsonDict objectForKey:@"results"] objectAtIndex:0] objectForKey:@"artworkUrl60"];
-            NSURL *iconUrl = [NSURL URLWithString:artworkUrl60];
-            NSData *iconData = [NSData dataWithContentsOfURL:iconUrl];
-            img = [UIImage imageWithData: iconData];
-            self.image = img;
-        }
-        @catch (NSException *x) {
-            NSLog(@"[Prog][fetchAppIcon] Couldn't fetch app icon from iTunes API, using the one cached in the system if available.\n[Prog][fetchAppIcon] exception: %@", x);
+        //     NSString *artworkUrl60 = [[[jsonDict objectForKey:@"results"] objectAtIndex:0] objectForKey:@"artworkUrl60"];
+        //     NSURL *iconUrl = [NSURL URLWithString:artworkUrl60];
+        //     NSData *iconData = [NSData dataWithContentsOfURL:iconUrl];
+        //     img = [UIImage imageWithData: iconData];
+        //     self.image = img;
+        // }
+        // @catch (NSException *x) {
+        //     NSLog(@"[Prog][fetchAppIcon] Couldn't fetch app icon from iTunes API, using the one cached in the system if available.\n[Prog][fetchAppIcon] exception: %@", x);
     		img = [UIImage _applicationIconImageForBundleIdentifier:bundleId format:1];
-        }
+        // }
     } else {
         img = self.image;
     }
