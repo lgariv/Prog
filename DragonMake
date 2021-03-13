@@ -11,7 +11,7 @@ Prog:
     type: tweak
     files:
         - "Tweak.xm"
-        # - "welcome.x"
+        - "welcome.x"
     objc_files:
         - "fetchAppIcon.m"
     frameworks:
