@@ -56,11 +56,9 @@
     dispatch_once(&progOnceToken, ^{
         NSString *valueForMyKey;
         @try {
-            valueForMyKey = [[NSUserDefaults standardUserDefaults] stringForKey:@"progFirstTime"];
+            valueForMyKey = [[NSUserDefaults standardUserDefaults] objectForKey:@"progFirstTime"];
             NSLog(@"[Prog] valueForMyKey:%@", valueForMyKey);
-            // if ([valueForMyKey isEqualToString:@"NO"]) {
-                [[NSUserDefaults standardUserDefaults] setObject:@"YES" forKey:@"progFirstTime"];
-            // }
+            // [[NSUserDefaults standardUserDefaults] setObject:@"YES" forKey:@"progFirstTime"];
         }
         @catch ( NSException *exception ) {
             if (exception) {
@@ -68,7 +66,7 @@
             }
             valueForMyKey = @"YES";
         }
-        if ([valueForMyKey isEqualToString:@"YES"]) {
+        if ([valueForMyKey isEqualToString:@"YES"] || [[NSUserDefaults standardUserDefaults] objectForKey:@"progFirstTime"] == nil) {
             [[NSUserDefaults standardUserDefaults] setObject:@"NO" forKey:@"progFirstTime"];
             UIViewController *donateController = [[UIViewController alloc] init];
             [[donateController view] setBackgroundColor:[UIColor systemBackgroundColor]];
